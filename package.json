@@ -1,0 +1,23 @@
+{
+  "name": "autoflow",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "db:bootstrap": "pnpm --filter @autoflow/db cli bootstrap",
+    "db:migrate": "pnpm --filter @autoflow/db cli migrate",
+    "db:create-platform-user": "pnpm --filter @autoflow/api exec tsx scripts/create-platform-user.ts",
+    "bench:hash": "pnpm --filter @autoflow/api bench:hash"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

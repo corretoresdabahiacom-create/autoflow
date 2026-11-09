@@ -1,0 +1,24 @@
+{
+  "name": "@autoflow/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsx src/server.ts",
+    "bench:hash": "tsx scripts/bench-hash.ts"
+  },
+  "dependencies": {
+    "@autoflow/db": "workspace:*",
+    "@autoflow/shared": "workspace:*",
+    "@hono/node-server": "^2.1.6",
+    "@noble/hashes": "^2.4.0",
+    "hono": "^4.13.17",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}

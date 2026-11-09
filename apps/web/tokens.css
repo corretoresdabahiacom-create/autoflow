@@ -1,0 +1,22 @@
+/* Design tokens AutoFlow (Fase 1: fundação). Valores iniciais; refinados com a identidade visual na Fase 2+. */
+:root {
+  --af-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --af-color-bg: #f7f8fa;
+  --af-color-surface: #ffffff;
+  --af-color-text: #14181f;
+  --af-color-muted: #5b6573;
+  --af-color-primary: #1f5fd1;
+  --af-color-primary-contrast: #ffffff;
+  --af-color-danger: #c0392b;
+  --af-color-success: #1e7d4f;
+  --af-color-border: #d9dee6;
+  --af-radius: 8px;
+  --af-space-1: 4px; --af-space-2: 8px; --af-space-3: 16px; --af-space-4: 24px; --af-space-5: 40px;
+  --af-focus-ring: 0 0 0 3px rgba(31, 95, 209, 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --af-color-bg: #0f1218; --af-color-surface: #181d26; --af-color-text: #eef1f6;
+    --af-color-muted: #9aa5b4; --af-color-border: #2b3340; --af-color-primary: #5b8def;
+  }
+}
