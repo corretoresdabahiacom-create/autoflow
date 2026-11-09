@@ -2,11 +2,13 @@ import type { Entitlements } from "@autoflow/shared";
 import type { Config } from "./config";
 import type { Db } from "./db";
 import type { EmailProvider } from "./email";
+import type { StorageProvider } from "./storage";
 
 export interface Deps {
   config: Config;
   db: Db;
   email: EmailProvider;
+  storage: StorageProvider;
 }
 
 export interface SessionRow {

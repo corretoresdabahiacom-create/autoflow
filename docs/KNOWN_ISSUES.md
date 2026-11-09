@@ -16,3 +16,9 @@
 | KI-012 | Workers/Hyperdrive **não validados**: a API roda em Node (Hono, `pg`). Não há deploy em dev/staging nesta fase (sem conta Cloudflare). Ambientes dev/test/staging estão definidos só como configuração/CI | P1 | Bloqueio externo (KI-006) |
 | KI-013 | Frontend limitado a casca estática + design tokens (`apps/web`); sem React/Vite/PWA ainda | P3 | Planejado (Fase 2) |
 | KI-014 | Teste de RLS roda com superusuário apenas para fixtures; produção usa `app_rw`. Testes não cobrem Hyperdrive/pooling (SET LOCAL é por transação, compatível com pooling em modo transaction, não exercitado) | P2 | Validar em staging |
+| KI-015 | Anexos: adaptador **R2 privado não implementado/validado**; há `LocalDiskStorage` (dev) e `MemoryStorage` (teste); em produção o storage responde 503 até existir adaptador. URLs assinadas são HMAC próprias (300 s), não presigned do R2 | P1 | Bloqueio externo (conta Cloudflare) |
+| KI-016 | UI da Fase 2 é mínima: login, busca, nova OS, orçamento (itens/publicar/aprovação assistida). **Faltam na UI**: vistoria (marcações, fotos, termo), upload, diff entre versões, execução/exceção. Decisão assistida usa `prompt()` do navegador (provisório) | P2 | Pendente (Fase 2b) |
+| KI-017 | Teste de ponta a ponta da UI foi **manual/scriptado uma vez** (Playwright local, 390 px); não está na CI. Sem teste de acessibilidade automatizado nem Lighthouse | P2 | Planejado |
+| KI-018 | Busca p95 medida na API local com 10k clientes/3k veículos (~25 ms); não representa Hyperdrive/rede/Postgres gerenciado | P2 | Reavaliar em staging |
+| KI-019 | Sem `Idempotency-Key` em mutações (ARCHITECTURE); duplicidade é contida por constraints (aprovação única por item, execução única por item), não por chave | P2 | Planejado (Fase 3, antes do portal) |
+| KI-020 | CPF/CNPJ do cliente (`doc_enc`/`doc_hash`) **não implementado** (opcional no modelo) | P3 | Planejado |

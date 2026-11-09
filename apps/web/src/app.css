@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--af-font-sans); background: var(--af-color-bg); color: var(--af-color-text); }
+header { display: flex; align-items: center; justify-content: space-between; gap: var(--af-space-2); padding: var(--af-space-2) var(--af-space-3); background: var(--af-color-surface); border-bottom: 1px solid var(--af-color-border); position: sticky; top: 0; }
+main { max-width: 720px; margin: 0 auto; padding: var(--af-space-3); }
+h1, h2 { margin: var(--af-space-3) 0 var(--af-space-2); }
+.card { background: var(--af-color-surface); border: 1px solid var(--af-color-border); border-radius: var(--af-radius); padding: var(--af-space-3); margin-bottom: var(--af-space-3); }
+label { display: block; font-size: 14px; color: var(--af-color-muted); margin-bottom: var(--af-space-2); }
+input, select { display: block; width: 100%; min-height: 44px; font: inherit; padding: 8px 10px; margin-top: 4px; border: 1px solid var(--af-color-border); border-radius: var(--af-radius); background: var(--af-color-surface); color: inherit; }
+button { min-height: 44px; padding: 8px 14px; font: inherit; border-radius: var(--af-radius); border: 1px solid var(--af-color-primary); background: var(--af-color-primary); color: var(--af-color-primary-contrast); cursor: pointer; }
+button.secondary { background: transparent; color: var(--af-color-primary); }
+button:disabled { opacity: .6; cursor: progress; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: var(--af-focus-ring); }
+.row { display: flex; gap: var(--af-space-2); flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.muted { color: var(--af-color-muted); }
+.error { color: var(--af-color-danger); }
+.banner { background: var(--af-color-danger); color: #fff; text-align: center; padding: 6px; font-size: 14px; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--af-color-border); }
+.badge.approved, .badge.approved_inherited { color: var(--af-color-success); border-color: var(--af-color-success); }
+.badge.rejected { color: var(--af-color-danger); border-color: var(--af-color-danger); }
+ul.list { list-style: none; padding: 0; margin: 0; }
+ul.list li { padding: var(--af-space-2) 0; border-bottom: 1px solid var(--af-color-border); }

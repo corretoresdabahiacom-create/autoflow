@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0"
   }
 }

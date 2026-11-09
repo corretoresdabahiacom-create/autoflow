@@ -14,3 +14,12 @@ Clientes e veículos (busca por placa/telefone/nome/OS); OS com numeração por 
 8. Termo de entrada gerado e armazenado.
 9. Busca por placa/telefone/nome/nº OS < 300 ms p95 em dataset de teste (10k clientes).
 10. Responsivo mobile-first; estados loading/erro/vazio/offline. Sem P0/P1.
+
+
+## Decisões tomadas na implementação (2026-11-09)
+- **Dinheiro:** centavos (`bigint`); quantidade `numeric(12,3)`; total de linha em aritmética inteira (arredonda meio para cima).
+- **Orçamento:** 1 por OS, N versões. Rascunho único por orçamento; publicar substitui (supersede) a versão publicada anterior. Editar após publicar cria v+1 copiando linhas (mesmas `line_key`).
+- **Hash do item:** SHA-256 de (descrição normalizada, categoria, qtd em milésimos, preço em centavos).
+- **Regra de herança (critério 4):** aprovação da versão anterior vale na atual **somente** se a linha existe na versão **imediatamente anterior** com **hash idêntico** e estava aprovada (própria ou herdada). Se a linha sair de uma versão, a cadeia quebra. **Recusa nunca é herdada.** Voltar ao conteúdo antigo depois de uma mudança não ressuscita a aprovação.
+- **Aprovação assistida:** exige nome de quem decidiu; evidência = versão, hash apresentado, usuário, IP (hash), UA, horário. Não afirma validade jurídica.
+- **Exceção de execução:** política por tenant (habilitada + teto em centavos), permissão `approvals:exception`, justificativa ≥ 20 caracteres e anexo de evidência da própria OS.

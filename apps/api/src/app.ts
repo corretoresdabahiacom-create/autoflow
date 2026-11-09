@@ -6,6 +6,9 @@ import { Router } from "./router";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerPlatformRoutes } from "./routes/platform";
 import { registerTenantRoutes } from "./routes/tenant";
+import { registerCustomerRoutes } from "./routes/customers";
+import { registerOrderRoutes } from "./routes/orders";
+import { registerEstimateRoutes } from "./routes/estimates";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -36,6 +39,9 @@ export function createApp(deps: Deps) {
   registerAuthRoutes(router, deps);
   registerTenantRoutes(router, deps);
   registerPlatformRoutes(router, deps);
+  registerCustomerRoutes(router, deps);
+  registerOrderRoutes(router, deps);
+  registerEstimateRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
@@ -44,6 +50,10 @@ export function createApp(deps: Deps) {
       return c.json({ error: err.code, ...(err.message !== err.code ? { message: err.message } : {}) }, err.status);
     }
     if (err instanceof ZodError) return c.json({ error: "validation_error" }, 422);
+    const pgCode = (err as { code?: string }).code;
+    if (pgCode === "23514") return c.json({ error: "constraint_violation", message: (err as Error).message }, 409);
+    if (pgCode === "23505") return c.json({ error: "conflict" }, 409);
+    if (pgCode === "23503") return c.json({ error: "invalid_reference" }, 422);
     if (deps.config.logLevel !== "silent") {
       // Nunca registrar corpo/headers/tokens: apenas tipo do erro e id da requisição.
       console.error(JSON.stringify({ level: "error", requestId: c.get("requestId"), name: (err as Error).name }));

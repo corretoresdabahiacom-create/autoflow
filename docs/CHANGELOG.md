@@ -1,5 +1,15 @@
 # Changelog
 
+## [Fase 2 — Clientes e OS] — 2026-11-09
+### Adicionado
+- Migração 0004: clientes, veículos (placa única por tenant), OS (contador por unidade), vistoria + marcações, anexos, orçamento versionado (triggers de imutabilidade), aprovações append-only, política/execuções com exceção, permissões e RLS.
+- API: clientes/veículos/busca unificada, OS, vistoria + termo de entrada em PDF, upload validado (tamanho/MIME/magic bytes) e URL assinada, orçamento (rascunho/publicar/diff), aprovação assistida, bloqueio de execução e exceção controlada.
+- `packages/shared/estimates`: hash do item, total em inteiros, diff, regra de herança, status efetivo.
+- `apps/web`: React+Vite mobile-first mínimo (login, busca, nova OS, orçamento).
+### Decisões
+- Valores em **centavos**; 1 orçamento por OS com N versões; herança de aprovação só da versão imediatamente anterior e só com hash idêntico (recusa não herda); aprovação única por item (mudar de ideia = nova versão).
+- Ver `docs/phases/FASE-02-relatorio.md`.
+
 ## [Fase 1 — Fundação] — 2026-11-09
 ### Adicionado
 - Monorepo pnpm (`packages/shared`, `packages/db`, `apps/api`, `apps/web` casca).
