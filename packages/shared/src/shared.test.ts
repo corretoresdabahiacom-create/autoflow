@@ -133,3 +133,19 @@ describe("computeEffectiveStatuses", () => {
     expect(st.get("3b")).toBe("pending"); // v2 mudou; voltar ao hash antigo não ressuscita aprovação
   });
 });
+
+import { DEFAULT_THEME, MANDATORY_BLOCKS, contrastRatio, validateTheme } from "./portal";
+describe("portal theme", () => {
+  it("contraste WCAG", () => {
+    expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 0);
+    expect(contrastRatio("#777777", "#ffffff")).toBeLessThan(4.5);
+    expect(contrastRatio("#1f5fd1", "#ffffff")).toBeGreaterThan(4.5);
+  });
+  it("tema padrão é válido; ocultar obrigatório ou cor fraca é recusado", () => {
+    expect(validateTheme(DEFAULT_THEME)).toEqual([]);
+    for (const b of MANDATORY_BLOCKS) expect(validateTheme({ ...DEFAULT_THEME, hidden: [b] }).length).toBeGreaterThan(0);
+    expect(validateTheme({ ...DEFAULT_THEME, primaryColor: "#ffff00" }).length).toBeGreaterThan(0);
+    expect(validateTheme({ ...DEFAULT_THEME, hidden: ["photos", "chat"] })).toEqual([]);
+    expect(validateTheme({ ...DEFAULT_THEME, extra: 1 }).length).toBeGreaterThan(0);
+  });
+});

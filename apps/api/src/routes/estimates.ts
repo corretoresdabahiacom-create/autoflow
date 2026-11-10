@@ -16,6 +16,7 @@ import { HttpError, conflict, forbidden, notFound, parseJson } from "../http";
 import type { Router } from "../router";
 import type { Deps, TenantPrincipal } from "../types";
 import { assertOpen, loadOrder } from "./orders";
+import { addTimeline } from "../timeline";
 import { tctx } from "./tenant";
 
 const uuid = z.string().uuid();
@@ -54,7 +55,7 @@ interface VersionRow {
   total_cents: string | null; presented_hash: string | null; published_at: Date | null;
 }
 
-async function loadModel(q: Q, osId: string) {
+export async function loadModel(q: Q, osId: string) {
   const est = await q.one<{ id: string; unit_id: string }>("select id, unit_id from estimates where os_id = $1", [osId]);
   if (!est) return { est: null, versions: [] as (VersionRow & { items: (ItemRow & { status: ItemStatus })[] })[] };
   const versions = await q.many<VersionRow>(
@@ -90,7 +91,7 @@ const toVersionItem = (i: ItemRow): VersionItem => ({
   qty: Number(i.qty), unitPriceCents: Number(i.unit_price_cents),
 });
 
-const present = (i: ItemRow & { status: ItemStatus }) => ({
+export const present = (i: ItemRow & { status: ItemStatus }) => ({
   id: i.id, lineKey: i.line_key, description: i.description, category: i.category, qty: Number(i.qty),
   unitPriceCents: Number(i.unit_price_cents), totalCents: lineTotalCents(Number(i.qty), Number(i.unit_price_cents)), status: i.status,
 });
@@ -216,6 +217,7 @@ export function registerEstimateRoutes(r: Router, deps: Deps): void {
         "update estimate_versions set status = 'published', total_cents = $2, presented_hash = $3, published_at = now(), published_by = $4 where id = $1",
         [draft.id, total, presentedHash, p.userId],
       );
+      await addTimeline(q, { tenantId: p.tenantId, unitId: os.unit_id, osId: id, kind: "estimate.published", title: `Orçamento v${draft.version_no} disponível para aprovação` });
       await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "estimate.publish", entityType: "order", entityId: id, requestId: c.get("requestId"), metadata: { versionNo: draft.version_no, total } });
       return { versionNo: draft.version_no, totalCents: total, presentedHash };
     });
@@ -274,6 +276,7 @@ export function registerEstimateRoutes(r: Router, deps: Deps): void {
           ],
         );
       }
+      await addTimeline(q, { tenantId: p.tenantId, unitId: os.unit_id, osId: id, kind: "approval.recorded", title: "Decisão sobre o orçamento registrada", visibleToCustomer: true });
       await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "approval.assisted", entityType: "order", entityId: id, requestId: c.get("requestId"), metadata: { versionNo: cur.version_no, count: b.decisions.length } });
       const after = await loadModel(q, id);
       return after.versions.find((v) => v.status === "published")!.items.map(present);

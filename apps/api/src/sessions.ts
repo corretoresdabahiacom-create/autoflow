@@ -5,7 +5,7 @@ import type { SessionRow } from "./types";
 
 export function cookieNames(config: Config) {
   const p = config.cookieSecure ? "__Host-" : "";
-  return { tenant: `${p}af_session`, platform: `${p}af_psession` };
+  return { tenant: `${p}af_session`, platform: `${p}af_psession`, portal: `${p}af_portal` };
 }
 
 export interface NewSession {

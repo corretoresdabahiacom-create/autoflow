@@ -7,6 +7,7 @@ import { buildEntryTermPdf } from "../pdf";
 import type { Router } from "../router";
 import { MAX_UPLOAD_BYTES, signFileUrl, validateUpload, verifyFileSig } from "../storage";
 import type { Deps } from "../types";
+import { addTimeline } from "../timeline";
 import { tctx } from "./tenant";
 
 const uuid = z.string().uuid();
@@ -83,6 +84,7 @@ export function registerOrderRoutes(r: Router, deps: Deps): void {
         [p.tenantId, unit.id, n!.last_number, b.customerId, b.vehicleId, b.promisedAt ?? null, b.notes ?? null, p.userId],
       );
       await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "order.create", entityType: "order", entityId: o!.id, requestId: c.get("requestId") });
+      await addTimeline(q, { tenantId: p.tenantId, unitId: unit.id, osId: o!.id, kind: "order.created", title: `OS ${n!.last_number} aberta` });
       return { id: o!.id, number: n!.last_number, unitId: unit.id };
     });
     return c.json(row, 201);
@@ -136,9 +138,19 @@ export function registerOrderRoutes(r: Router, deps: Deps): void {
       assertOpen(o);
       await q.query(
         `update service_orders set promised_at = case when $2 then $3::timestamptz else promised_at end,
-                notes = case when $4 then $5 else notes end, status = coalesce($6, status) where id = $1`,
+                notes = case when $4 then $5 else notes end, status = coalesce($6, status),
+                delivered_at = case when $6 = 'delivered' then now() else delivered_at end where id = $1`,
         [id, b.promisedAt !== undefined, b.promisedAt ?? null, b.notes !== undefined, b.notes ?? null, b.status ?? null],
       );
+      if (b.status) {
+        // Entrega/cancelamento: links do portal passam a expirar após o prazo configurado (padrão 90 dias).
+        const st = await q.one<{ link_ttl_days: number }>("select link_ttl_days from portal_settings");
+        await q.query(
+          "update portal_links set expires_at = least(expires_at, now() + make_interval(days => $2)) where os_id = $1 and revoked_at is null",
+          [id, st?.link_ttl_days ?? 90],
+        );
+        await addTimeline(q, { tenantId: p.tenantId, unitId: o.unit_id, osId: id, kind: `order.${b.status}`, title: b.status === "delivered" ? `OS ${o.number} entregue` : `OS ${o.number} cancelada` });
+      }
       await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "order.update", entityType: "order", entityId: id, requestId: c.get("requestId"), metadata: { status: b.status } });
     });
     return c.json({ ok: true });
@@ -305,6 +317,7 @@ export function registerOrderRoutes(r: Router, deps: Deps): void {
         "update inspections set confirmed_at = $2, confirmed_by_name = $3, confirmed_by_user = $4, term_attachment_id = $5 where id = $1",
         [insp.id, confirmedAt, b.confirmedByName, p.userId, attId],
       );
+      await addTimeline(q, { tenantId: p.tenantId, unitId: o.unit_id, osId: id, kind: "inspection.confirmed", title: "Vistoria de entrada confirmada" });
       await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "inspection.confirm", entityType: "order", entityId: id, requestId: c.get("requestId") });
       return { termAttachmentId: attId };
     });

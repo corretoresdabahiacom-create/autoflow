@@ -19,3 +19,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .badge.rejected { color: var(--af-color-danger); border-color: var(--af-color-danger); }
 ul.list { list-style: none; padding: 0; margin: 0; }
 ul.list li { padding: var(--af-space-2) 0; border-bottom: 1px solid var(--af-color-border); }
+
+.portal { max-width: 40rem; margin: 0 auto; padding: 1rem; }
+.portal h1, .portal h2 { color: var(--portal-primary, var(--color-primary, #1f5fd1)); }
+.portal button { min-height: 44px; padding: 0 1rem; }
+.portal li { margin: .5rem 0; }

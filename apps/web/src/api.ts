@@ -30,6 +30,14 @@ export const ERRORS: Record<string, string> = {
   permission_denied: "Você não tem permissão para isso.",
   not_approved: "Item não aprovado: não pode ser executado.",
   limit_reached: "Limite do plano atingido.",
+  invalid_link: "Link inválido. Peça um novo à oficina.",
+  link_revoked: "Este link foi cancelado. Peça um novo à oficina.",
+  link_expired: "Este link expirou. Peça um novo à oficina.",
+  session_expired: "Sua sessão expirou. Abra o link novamente.",
+  invalid_otp: "Código incorreto ou expirado.",
+  version_obsolete: "O orçamento foi atualizado. Recarregue a página.",
+  otp_channel_not_configured: "Envio de código indisponível. Fale com a oficina.",
+  justification_required: "Informe o motivo da recusa.",
   validation_error: "Confira os campos informados.",
 };
 export const errText = (e: unknown) => (e instanceof ApiError ? (ERRORS[e.code] ?? `Erro (${e.code})`) : "Erro inesperado.");

@@ -15,6 +15,10 @@ export interface Config {
   platformSessionIdleMinutes: number;
   platformSessionAbsoluteHours: number;
   platformMfaRecentMinutes: number;
+  portalSessionIdleMinutes: number;
+  portalSessionAbsoluteHours: number;
+  portalFailDelayBaseMs: number;
+  portalBaseUrl: string;
   logLevel: "silent" | "info";
 }
 
@@ -66,6 +70,10 @@ export function loadConfig(env: Env = process.env): Config {
     platformSessionIdleMinutes: 30,
     platformSessionAbsoluteHours: 8,
     platformMfaRecentMinutes: 15,
+    portalSessionIdleMinutes: 30,
+    portalSessionAbsoluteHours: 4,
+    portalFailDelayBaseMs: Number(env.PORTAL_FAIL_DELAY_MS ?? 250),
+    portalBaseUrl: env.PORTAL_BASE_URL ?? origins[0] ?? "http://localhost:5173",
     logLevel: mode === "test" ? "silent" : "info",
   };
 }

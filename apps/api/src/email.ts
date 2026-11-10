@@ -2,7 +2,7 @@ import { HttpError } from "./http";
 
 export interface EmailMessage {
   to: string;
-  template: "invite" | "password_reset";
+  template: "invite" | "password_reset" | "otp" | "notification";
   /** Variáveis do template. Contêm tokens: nunca registrar em log. */
   vars: Record<string, string>;
 }

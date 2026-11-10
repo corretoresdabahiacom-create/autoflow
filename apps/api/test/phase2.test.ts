@@ -173,7 +173,7 @@ describe("C4 aprovações e herança", () => {
     await c.post(`/orders/${o.orderId}/estimate/decisions`, { customerName: "Maria", decisions: [{ itemId: it.id, decision: "approved" }] });
     const after = await snapshot();
     const changed = Object.keys(after).filter((k) => after[k] !== before[k]).sort();
-    expect(changed).toEqual(["approvals", "audit_log"]);
+    expect(changed).toEqual(["approvals", "audit_log", "outbox", "os_timeline"].sort()); // Fase 3: timeline + outbox transacionais; nada financeiro
     const fin = await ownerSql("select table_name from information_schema.tables where table_schema='public' and table_name ~ 'receiv|receipt|ledger|payment|installment'");
     expect(fin).toHaveLength(0); // não existe estrutura financeira nesta fase
   });

@@ -2,6 +2,7 @@ import type { Entitlements } from "@autoflow/shared";
 import type { Config } from "./config";
 import type { Db } from "./db";
 import type { EmailProvider } from "./email";
+import type { OtpChannel } from "./otp";
 import type { StorageProvider } from "./storage";
 
 export interface Deps {
@@ -9,6 +10,7 @@ export interface Deps {
   db: Db;
   email: EmailProvider;
   storage: StorageProvider;
+  otp: OtpChannel;
 }
 
 export interface SessionRow {
@@ -40,8 +42,17 @@ export interface PlatformPrincipal {
   mfaVerifiedAt: Date | null;
 }
 
+export interface PortalPrincipal {
+  sessionId: string;
+  linkId: string;
+  tenantId: string;
+  unitId: string;
+  osId: string;
+}
+
 export type AppEnv = {
   Variables: {
+    portal: PortalPrincipal;
     requestId: string;
     ipHash: string;
     tenant: TenantPrincipal;

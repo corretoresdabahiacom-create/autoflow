@@ -1,5 +1,16 @@
 # Changelog
 
+## [Fase 3] — 2026-11-10
+### Adicionado
+- Migração 0005: links/sessões/OTPs do portal, log de acesso e timeline (append-only), mensagens, outbox, versões de tema (CHECK impede ocultar blocos obrigatórios), permissão `portal:manage`, `delivered_at`, `attachments.portal_visible`, canal de aprovação `portal`.
+- API do portal (`/portal/*`): troca de token por sessão (token em fragmento, só hash no banco, ≥256 bits), visão da OS derivada da sessão, OTP + aprovação por item com evidência completa, chat, logout.
+- API da equipe: criar/listar/revogar/renovar link (QR SVG), log de acesso, visibilidade de anexos, TTL, mensagens, tema (rascunho/publicar/restaurar), consentimento de notificações.
+- Outbox transacional + processador com consentimento, backoff e `skipped/failed`.
+- Página `/portal` no web (mobile-first, token removido da URL após troca).
+### Alterado
+- Decisões assistidas e publicações agora geram timeline/outbox (teste C5 atualizado). Entrega encurta validade do link (padrão 90 dias).
+
+
 ## [Fase 2 — Clientes e OS] — 2026-11-09
 ### Adicionado
 - Migração 0004: clientes, veículos (placa única por tenant), OS (contador por unidade), vistoria + marcações, anexos, orçamento versionado (triggers de imutabilidade), aprovações append-only, política/execuções com exceção, permissões e RLS.

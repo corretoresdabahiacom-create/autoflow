@@ -26,3 +26,17 @@ export async function enforceRateLimit(db: Db, rules: readonly RateRule[]): Prom
     throw new HttpError(429, "rate_limited", undefined, { "Retry-After": String(Math.min(exceeded, 900)) });
   }
 }
+
+/** Incrementa e devolve o contador da janela (sem lançar). Usado para atraso progressivo. */
+export async function bumpCounter(db: Db, key: string, windowSec: number): Promise<number> {
+  return db.system(async (q) => {
+    const row = await q.one<{ count: number }>(
+      `insert into rate_limits (key, window_start, count)
+       values ($1, to_timestamp(floor(extract(epoch from now()) / $2::int) * $2::int), 1)
+       on conflict (key, window_start) do update set count = rate_limits.count + 1
+       returning count`,
+      [key, windowSec],
+    );
+    return row?.count ?? 1;
+  });
+}

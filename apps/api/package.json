@@ -17,9 +17,11 @@
     "hono": "^4.13.17",
     "pdf-lib": "1.17.1",
     "pg": "^8.23.1",
+    "qrcode": "1.5.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/pg": "^8.23.1"
+    "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6"
   }
 }

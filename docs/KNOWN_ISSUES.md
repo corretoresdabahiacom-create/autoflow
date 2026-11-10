@@ -22,3 +22,10 @@
 | KI-018 | Busca p95 medida na API local com 10k clientes/3k veículos (~25 ms); não representa Hyperdrive/rede/Postgres gerenciado | P2 | Reavaliar em staging |
 | KI-019 | Sem `Idempotency-Key` em mutações (ARCHITECTURE); duplicidade é contida por constraints (aprovação única por item, execução única por item), não por chave | P2 | Planejado (Fase 3, antes do portal) |
 | KI-020 | CPF/CNPJ do cliente (`doc_enc`/`doc_hash`) **não implementado** (opcional no modelo) | P3 | Planejado |
+| KI-021 | Portal acessa o banco com ator `tenant` + escopo `unit_ids=[unidade da OS]` e consultas filtradas por `os_id` derivado da sessão; **não há ator RLS dedicado `portal`** (isolamento por OS depende do código, coberto por testes de IDOR) | P2 | Risco residual aceito; avaliar ator `portal` com policy por `os_id` |
+| KI-022 | **OTP real não validado**: canais existentes são `Memory` (simulado, testes), `Unconfigured` (503 em produção) e e-mail provisório (prova e-mail, não telefone). Nenhum SMS/WhatsApp. Ver KI-003/KI-010 | P1 | Bloqueio externo (decisão do usuário + provedor) |
+| KI-023 | Não existe Service Worker; quando houver (PWA), **deve excluir `/portal` e `/api/portal`** do cache. Respostas já saem `Cache-Control: no-store` | P2 | Regra registrada |
+| KI-024 | Processador do outbox (`processOutbox`) existe e é testado, mas **não está agendado** (sem infraestrutura de fila/cron). Notificações só saem e-mail e dependem de KI-010 | P1 | Bloqueio externo |
+| KI-025 | Renovação de link só pela equipe (autoatendimento do cliente com nova verificação não implementado) | P3 | Planejado |
+| KI-026 | UI do portal é mínima (aprovar/recusar, OTP, timeline, chat texto). Faltam: upload de fotos/documentos pelo cliente na UI, editor visual do tema (API pronta), QR/links na tela da equipe, teste E2E/Lighthouse. Contraste AA validado só para a cor primária do tema | P2 | Pendente |
+| KI-027 | `Idempotency-Key` (KI-019) continua não implementado; aprovação do portal é protegida por OTP de uso único + unicidade por item | P2 | Planejado |

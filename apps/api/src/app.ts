@@ -9,6 +9,8 @@ import { registerTenantRoutes } from "./routes/tenant";
 import { registerCustomerRoutes } from "./routes/customers";
 import { registerOrderRoutes } from "./routes/orders";
 import { registerEstimateRoutes } from "./routes/estimates";
+import { registerPortalRoutes } from "./routes/portal";
+import { registerPortalAdminRoutes } from "./routes/portal-admin";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -42,6 +44,8 @@ export function createApp(deps: Deps) {
   registerCustomerRoutes(router, deps);
   registerOrderRoutes(router, deps);
   registerEstimateRoutes(router, deps);
+  registerPortalRoutes(router, deps);
+  registerPortalAdminRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
