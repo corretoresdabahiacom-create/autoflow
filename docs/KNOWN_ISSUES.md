@@ -29,3 +29,7 @@
 | KI-025 | Renovação de link só pela equipe (autoatendimento do cliente com nova verificação não implementado) | P3 | Planejado |
 | KI-026 | UI do portal é mínima (aprovar/recusar, OTP, timeline, chat texto). Faltam: upload de fotos/documentos pelo cliente na UI, editor visual do tema (API pronta), QR/links na tela da equipe, teste E2E/Lighthouse. Contraste AA validado só para a cor primária do tema | P2 | Pendente |
 | KI-027 | `Idempotency-Key` (KI-019) continua não implementado; aprovação do portal é protegida por OTP de uso único + unicidade por item | P2 | Planejado |
+| KI-028 | UI de produção mínima: Kanban com arrastar/teclado/seletor; **faltam na UI** tarefas (criar/atribuir/iniciar/pausar), agenda (dia/semana/mês), config de etapas/boxes e fotos de tarefa. API completa e testada. Acessibilidade do Kanban verificada apenas por revisão (sem teste automatizado/leitor de tela) | P2 | Pendente |
+| KI-029 | Conflito de box usa janela **planejada** (`planned_start/end`); tempo real excedendo o planejado não bloqueia o box seguinte. Lista de espera e conflitos avançados: Fase 9 | P3 | Planejado |
+| KI-030 | Custo/hora (`employee_rates`) por funcionário sem histórico de vigência; `labor` usa a taxa atual. Fase 5 deve versionar | P2 | Planejado (Fase 5) |
+| KI-031 | Mecânico restrito à própria tarefa é regra da **API** (não RLS); isolamento de unidade e tenant segue por RLS | P2 | Risco residual aceito |

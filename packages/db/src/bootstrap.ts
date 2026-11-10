@@ -61,6 +61,7 @@ export async function bootstrap(opts: BootstrapOptions): Promise<void> {
   try {
     await inDb.query("create extension if not exists citext");
     await inDb.query("create extension if not exists pg_trgm");
+    await inDb.query("create extension if not exists btree_gist");
     await inDb.query("revoke create on schema public from public");
     await inDb.query("grant all on schema public to app_owner");
   } finally {

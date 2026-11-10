@@ -11,6 +11,7 @@ import { registerOrderRoutes } from "./routes/orders";
 import { registerEstimateRoutes } from "./routes/estimates";
 import { registerPortalRoutes } from "./routes/portal";
 import { registerPortalAdminRoutes } from "./routes/portal-admin";
+import { registerProductionRoutes } from "./routes/production";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -46,6 +47,7 @@ export function createApp(deps: Deps) {
   registerEstimateRoutes(router, deps);
   registerPortalRoutes(router, deps);
   registerPortalAdminRoutes(router, deps);
+  registerProductionRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
@@ -56,6 +58,7 @@ export function createApp(deps: Deps) {
     if (err instanceof ZodError) return c.json({ error: "validation_error" }, 422);
     const pgCode = (err as { code?: string }).code;
     if (pgCode === "23514") return c.json({ error: "constraint_violation", message: (err as Error).message }, 409);
+    if (pgCode === "23P01") return c.json({ error: "box_conflict" }, 409);
     if (pgCode === "23505") return c.json({ error: "conflict" }, 409);
     if (pgCode === "23503") return c.json({ error: "invalid_reference" }, 422);
     if (deps.config.logLevel !== "silent") {

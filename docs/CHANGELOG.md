@@ -1,5 +1,11 @@
 # Changelog
 
+## [Fase 4] — 2026-11-10
+### Adicionado
+- Migração 0006: etapas configuráveis, histórico de etapas (append-only), boxes, custo/hora, tarefas (EXCLUDE de box), tempo apontado (trabalho/pausa com motivo), agenda (EXCLUDE de box), `attachments.task_id`, permissões `production:*` e `schedule:*`.
+- API: Kanban, mudança de etapa (histórico + timeline + outbox transacionais), tarefas por OS (iniciar/pausar/retomar/concluir/cancelar), tempo, atraso, fotos, mão de obra (minutos × custo/hora), agenda básica (intervalo livre, filtros, reagendar, cancelar com motivo).
+- Web: Kanban com arrastar, teclado (←/→) e seletor "Mover para".
+
 ## [Fase 3] — 2026-11-10
 ### Adicionado
 - Migração 0005: links/sessões/OTPs do portal, log de acesso e timeline (append-only), mensagens, outbox, versões de tema (CHECK impede ocultar blocos obrigatórios), permissão `portal:manage`, `delivered_at`, `attachments.portal_visible`, canal de aprovação `portal`.

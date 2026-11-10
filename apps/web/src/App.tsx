@@ -1,7 +1,8 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { api, errText } from "./api";
+import { Kanban } from "./Kanban";
 
-type View = { name: "login" } | { name: "home" } | { name: "new" } | { name: "order"; id: string };
+type View = { name: "login" } | { name: "board" } | { name: "home" } | { name: "new" } | { name: "order"; id: string };
 const brl = (cents: number) => (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const STATUS_LABEL: Record<string, string> = { pending: "pendente", approved: "aprovado", approved_inherited: "aprovado (herdado)", rejected: "recusado" };
 
@@ -56,7 +57,7 @@ function Home({ go }: { go: (v: View) => void }) {
   const [q, setQ] = useState(""); const [term, setTerm] = useState("");
   return (
     <main>
-      <div className="row"><h1>Atendimento</h1><button onClick={() => go({ name: "new" })}>Nova OS</button></div>
+      <div className="row"><h1>Atendimento</h1><button className="secondary" onClick={() => go({ name: "board" })}>Produção</button><button onClick={() => go({ name: "new" })}>Nova OS</button></div>
       <form className="card" role="search" onSubmit={(e) => { e.preventDefault(); setTerm(q.trim()); }}>
         <label>Buscar por placa, telefone, nome ou nº da OS<input value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search" /></label>
         <button>Buscar</button>
@@ -168,6 +169,7 @@ export function App() {
     {!view && <main><p role="status" className="muted">Carregando…</p></main>}
     {view?.name === "login" && <Login onDone={() => setView({ name: "home" })} />}
     {view?.name === "home" && <Home go={setView} />}
+    {view?.name === "board" && <Kanban onOpen={(id) => setView({ name: "order", id })} onBack={() => setView({ name: "home" })} />}
     {view?.name === "new" && <NewOrder go={setView} />}
     {view?.name === "order" && <Order id={view.id} go={setView} />}
   </>);

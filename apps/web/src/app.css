@@ -24,3 +24,10 @@ ul.list li { padding: var(--af-space-2) 0; border-bottom: 1px solid var(--af-col
 .portal h1, .portal h2 { color: var(--portal-primary, var(--color-primary, #1f5fd1)); }
 .portal button { min-height: 44px; padding: 0 1rem; }
 .portal li { margin: .5rem 0; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.board { display: flex; gap: .75rem; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: .5rem; }
+.column { flex: 0 0 min(85vw, 18rem); scroll-snap-align: start; background: var(--surface-2, #f3f5f8); border-radius: .5rem; padding: .5rem; }
+.kcard { background: #fff; border: 1px solid #c7ccd4; border-radius: .5rem; padding: .5rem; margin: .5rem 0; cursor: grab; }
+.kcard:focus-visible { outline: 3px solid #1f5fd1; outline-offset: 2px; }
+.kcard select { min-height: 44px; width: 100%; }
