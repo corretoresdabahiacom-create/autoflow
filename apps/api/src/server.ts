@@ -4,6 +4,7 @@ import { loadConfig } from "./config";
 import { Db } from "./db";
 import { LocalDiskStorage, UnconfiguredStorage } from "./storage";
 import { MemoryEmailProvider, UnconfiguredEmailProvider } from "./email";
+import { MemoryCaptcha, TurnstileCaptcha, UnconfiguredCaptcha } from "./captcha";
 import { MemoryOtpChannel, UnconfiguredOtpChannel } from "./otp";
 
 const config = loadConfig();
@@ -14,7 +15,8 @@ const email = config.env === "production" ? new UnconfiguredEmailProvider() : ne
 const storage = config.env === "production" ? new UnconfiguredStorage() : new LocalDiskStorage(process.env.STORAGE_DIR ?? "/tmp/autoflow-files");
 // KI-003: canal de OTP real ainda não definido. Produção falha fechada (503) até existir.
 const otp = config.env === "production" ? new UnconfiguredOtpChannel() : new MemoryOtpChannel();
-const { app } = createApp({ config, db, email, storage, otp });
+const captcha = config.env !== "production" ? new MemoryCaptcha() : process.env.TURNSTILE_SECRET ? new TurnstileCaptcha(process.env.TURNSTILE_SECRET) : new UnconfiguredCaptcha();
+const { app } = createApp({ config, db, email, storage, otp, captcha });
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
 if (config.logLevel !== "silent") console.log(JSON.stringify({ level: "info", msg: "api up", port }));

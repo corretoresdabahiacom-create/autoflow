@@ -4,6 +4,7 @@ import { Db } from "../src/db";
 import { MemoryEmailProvider } from "../src/email";
 import { MemoryStorage } from "../src/storage";
 import { MemoryOtpChannel } from "../src/otp";
+import { MemoryCaptcha } from "../src/captcha";
 import { hashPassword } from "../src/password";
 import { newTotpSecret, totpAtStep, totpStepNow, encryptSecret } from "../src/crypto";
 
@@ -22,8 +23,9 @@ export function makeHarness() {
   const email = new MemoryEmailProvider();
   const storage = new MemoryStorage();
   const otp = new MemoryOtpChannel();
-  const { app, registry } = createApp({ config, db, email, storage, otp });
-  return { config, db, email, storage, otp, app, registry };
+  const captcha = new MemoryCaptcha();
+  const { app, registry } = createApp({ config, db, email, storage, otp, captcha });
+  return { config, db, email, storage, otp, captcha, app, registry };
 }
 export type Harness = ReturnType<typeof makeHarness>;
 

@@ -10,6 +10,21 @@ export async function processOutbox(deps: Deps, tenantId: string, limit = 50): P
     q.many<{ id: string; os_id: string | null; kind: string; payload: { title?: string }; attempts: number }>(
       "select id, os_id, kind, payload, attempts from outbox where status = 'pending' and available_at <= now() order by id limit $1 for update skip locked", [limit]));
   for (const row of rows) {
+    if (row.kind === "lead.new") {
+      // Notificação interna para a equipe (não depende de consentimento do cliente).
+      const staff = await deps.db.tx(ctx, (q) => q.many<{ email: string }>(
+        `select distinct u.email from memberships m join users u on u.id = m.user_id join roles r on r.id = m.role_id
+          where m.status = 'active' and r.key in ('owner','admin','manager','attendant') limit 10`));
+      try {
+        for (const s of staff) await deps.email.send({ to: s.email, template: "notification", vars: { title: String(row.payload.title ?? "Novo lead") } });
+        await deps.db.tx(ctx, (q) => q.query("update outbox set status = 'sent', attempts = attempts + 1 where id = $1", [row.id])); res.sent++;
+      } catch (e) {
+        const attempts = row.attempts + 1;
+        await deps.db.tx(ctx, (q) => q.query(`update outbox set attempts = $2, last_error = $3, status = case when $2 >= $4 then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
+        res.failed++;
+      }
+      continue;
+    }
     const dest = row.os_id
       ? await deps.db.tx(ctx, (q) => q.one<{ customer_id: string; email: string | null }>(
           "select c.id as customer_id, c.email from service_orders o join customers c on c.tenant_id = o.tenant_id and c.id = o.customer_id where o.id = $1", [row.os_id]))

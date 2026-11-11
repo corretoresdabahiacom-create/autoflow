@@ -19,6 +19,8 @@ export interface Config {
   portalSessionAbsoluteHours: number;
   portalFailDelayBaseMs: number;
   portalBaseUrl: string;
+  publicBaseUrl: string;
+  turnstileSiteKey: string | null;
   logLevel: "silent" | "info";
 }
 
@@ -74,6 +76,8 @@ export function loadConfig(env: Env = process.env): Config {
     portalSessionAbsoluteHours: 4,
     portalFailDelayBaseMs: Number(env.PORTAL_FAIL_DELAY_MS ?? 250),
     portalBaseUrl: env.PORTAL_BASE_URL ?? origins[0] ?? "http://localhost:5173",
+    publicBaseUrl: (env.PUBLIC_BASE_URL ?? "http://localhost:8787").replace(/\/$/, ""),
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
     logLevel: mode === "test" ? "silent" : "info",
   };
 }

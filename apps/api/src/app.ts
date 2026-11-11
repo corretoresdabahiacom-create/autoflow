@@ -13,6 +13,8 @@ import { registerPortalRoutes } from "./routes/portal";
 import { registerPortalAdminRoutes } from "./routes/portal-admin";
 import { registerProductionRoutes } from "./routes/production";
 import { registerFinanceRoutes } from "./routes/finance";
+import { registerSitePublicRoutes } from "./routes/site-public";
+import { registerSiteAdminRoutes } from "./routes/site-admin";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -23,7 +25,7 @@ export function createApp(deps: Deps) {
     c.set("ipHash", await hashIp(clientIp(c), deps.config.ipHashSalt));
     await next();
     c.header("X-Content-Type-Options", "nosniff");
-    c.header("Cache-Control", "no-store");
+    if (!c.res.headers.has("Cache-Control")) c.header("Cache-Control", "no-store");
     c.header("X-Request-Id", c.get("requestId"));
   });
 
@@ -31,7 +33,8 @@ export function createApp(deps: Deps) {
   app.use("*", async (c, next) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
       const origin = c.req.header("origin");
-      if (!origin || !deps.config.allowedOrigins.includes(origin)) {
+      const publicOrigin = c.req.path.startsWith("/o/") && c.req.path.endsWith("/lead") && origin === new URL(deps.config.publicBaseUrl).origin;
+      if (!origin || (!deps.config.allowedOrigins.includes(origin) && !publicOrigin)) {
         throw new HttpError(403, "origin_not_allowed");
       }
     }
@@ -50,6 +53,8 @@ export function createApp(deps: Deps) {
   registerPortalAdminRoutes(router, deps);
   registerProductionRoutes(router, deps);
   registerFinanceRoutes(router, deps);
+  registerSitePublicRoutes(router, deps);
+  registerSiteAdminRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

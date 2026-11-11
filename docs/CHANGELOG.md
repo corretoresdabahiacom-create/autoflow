@@ -1,5 +1,16 @@
 # Changelog
 
+## [Fase 6] — 2026-11-11
+### Adicionado
+- Migração 0008: versões do site (rascunho/publicado/substituído), mídia, leads (funil Novo→Perdido), eventos de lead (append-only), mídia de lead, estatísticas diárias anônimas; permissões `site:manage`, `leads:read`, `leads:manage`; políticas RLS de leitura pública estreitas.
+- Público (HTML SSR sem JS, CSP restritiva): `/o/:slug`, `/c/:slug` (vCard, QR SVG/PNG), `/m/:slug/:id`, `/sitemap.xml`, `/robots.txt`, `POST /o/:slug/lead` (captcha, honeypot, rate limit, upload validado, lead + notificação).
+- Admin: rascunho/publicação/histórico/restauração, mídia, estatísticas, leads (funil, notas, eventos).
+- `@autoflow/shared/site`: modelos, validação por schema, contraste AA, URLs https, bot/DNT/GPC, origem de referência.
+- Web: tela "PRESENÇA DIGITAL" mínima.
+### Alterado
+- `Cache-Control` global só aplica `no-store` se a rota não definiu cabeçalho; CSRF aceita origem do site público apenas no formulário de lead.
+- Teste de assinatura da Fase 2 estabilizado (flaky).
+
 ## [Fase 5] — 2026-11-11
 ### Adicionado
 - Migração 0007: plano de contas, centros de custo, carteiras, **ledger append-only** (txn + lançamentos, partida dobrada verificada no commit, estorno por `reversal_of` único), documentos a receber/pagar, parcelas (Σ = líquido verificada no commit), liquidações com alocações e idempotência, conciliação, permissões `finance:*`.

@@ -248,7 +248,7 @@ describe("C7 uploads e URL assinada", () => {
     expect(url).toContain("sig=");
     expect((await new Client(h).get(url)).status).toBe(200);          // assinatura válida
     expect((await new Client(h).get(url.split("?")[0]!)).status).toBe(403);
-    expect((await new Client(h).get(url.replace(/sig=[0-9a-f]/, "sig=0"))).status).toBe(403);
+    expect((await new Client(h).get(url.replace(/sig=([0-9a-f])/, (_m, ch) => `sig=${ch === "0" ? "1" : "0"}`))).status).toBe(403);
     const exp = Number(/exp=(\d+)/.exec(url)![1]);
     expect(exp - Math.floor(Date.now() / 1000)).toBeLessThanOrEqual(300);
     const { signFileUrl } = await import("../src/storage");

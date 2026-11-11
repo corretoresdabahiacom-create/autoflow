@@ -42,3 +42,12 @@
 | KI-038 | Comprovantes (anexos) de contas a pagar e "compromisso comercial" informativo na aprovação **não implementados** (anexos hoje exigem OS) | P3 | Planejado |
 | KI-039 | Recebimento manual apenas (gateway só na Fase 8). Concorrência validada com bloqueio por documento + advisory lock de idempotência, **não** sob carga real nem com pooling (Hyperdrive) — KI-014 | P2 | Validar em staging |
 | KI-040 | Alçadas (desconto/estorno) são por **permissão + limite do tenant**; fluxo de aprovação em duas pessoas (solicitar → aprovar) não existe | P3 | Planejado |
+| KI-041 | **Lighthouse não medido** (critério 1 é meta). Verificado apenas: HTML completo sem JS (testes via `app.request`), sem JS/imagens externas, CSS inline mínimo, ETag/304. Medir em staging com CDN | P1 | Planejado |
+| KI-042 | **Turnstile não validado** contra o serviço real (sem chaves/rede). Testado com `MemoryCaptcha`; sem `TURNSTILE_SECRET` em produção o formulário falha fechado (503) | P1 | Bloqueado (credenciais) |
+| KI-043 | Estatísticas contam só requisições que chegam à API: páginas servidas por cache de borda/CDN não são contadas (subcontagem). Sem purge de CDN: invalidação é por ETag + `s-maxage=300` (propagação até ~5 min) | P2 | Planejado |
+| KI-044 | Páginas públicas são servidas pela própria API (Node), não por hospedagem SSR/CDN dedicada; deploy/Workers não validados (ver KI-012) | P2 | Planejado |
+| KI-045 | Sem "converter lead em cliente/OS" e sem deduplicação de leads (mesmo telefone gera novo lead); CRM é o funil básico | P2 | Planejado (Fase 7) |
+| KI-046 | "Copiar endereço" e Web Share exigem JS e **não foram implementados** (o site é zero-JS); endereço é texto selecionável e o compartilhamento é link `wa.me` | P3 | Decisão de projeto |
+| KI-047 | UI de Presença Digital é **mínima**: edição do site por JSON validado (não há editor visual WYSIWYG, nem upload de mídia/histórico/restauração na UI — API pronta e testada). Leads: lista + troca de status | P2 | Planejado |
+| KI-048 | Ator RLS `public` (leitura sem sessão) tem políticas estreitas (tenant ativo/trial, versão publicada, mídia), mas a **gravação do lead** muda para contexto de tenant após buscar o slug (mesmo risco residual de KI-011/KI-021) | P2 | Risco residual aceito |
+| KI-049 | Imagens servidas como enviadas (≤5 MB, validadas por magic bytes): **sem redimensionamento/srcset/WebP** automáticos; pode afetar Performance no Lighthouse | P2 | Planejado |

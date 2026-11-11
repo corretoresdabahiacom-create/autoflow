@@ -1,7 +1,7 @@
 import pg from "pg";
 import type { QueryResult, QueryResultRow } from "pg";
 
-export type Actor = "tenant" | "platform" | "system" | "support";
+export type Actor = "tenant" | "platform" | "system" | "support" | "public";
 
 /** Contexto transacional que alimenta a RLS (SET LOCAL). Definido apenas por esta camada. */
 export interface DbContext {
@@ -76,6 +76,11 @@ export class Db {
 
   system<T>(fn: (q: Q) => Promise<T>, userId?: string): Promise<T> {
     return this.tx({ actor: "system", userId }, fn);
+  }
+
+  /** Leitura pública (site/cartão/sitemap): sem sessão; as policies 'public' só expõem dados publicados. */
+  publicTx<T>(fn: (q: Q) => Promise<T>): Promise<T> {
+    return this.tx({ actor: "public", readonly: true }, fn);
   }
 
   async close(): Promise<void> {

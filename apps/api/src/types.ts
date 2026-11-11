@@ -1,5 +1,6 @@
 import type { Entitlements } from "@autoflow/shared";
 import type { Config } from "./config";
+import type { CaptchaVerifier } from "./captcha";
 import type { Db } from "./db";
 import type { EmailProvider } from "./email";
 import type { OtpChannel } from "./otp";
@@ -11,6 +12,7 @@ export interface Deps {
   email: EmailProvider;
   storage: StorageProvider;
   otp: OtpChannel;
+  captcha: CaptchaVerifier;
 }
 
 export interface SessionRow {

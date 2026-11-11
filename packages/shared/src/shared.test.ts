@@ -187,3 +187,23 @@ describe("finance", () => {
     expect(overheadForOrder({ method: "fixed", value: 700 }, { netRevenueCents: 0, trackedMinutes: 0 })).toBe(700);
   });
 });
+
+import { TEMPLATES, classifyReferrer, defaultSiteConfig, isBot, optedOut, safeHttpsUrl, templateContrastErrors, validateSiteConfig, waLink } from "./site";
+describe("site", () => {
+  it("todos os modelos passam em contraste AA texto/fundo", () => { for (const t of TEMPLATES) expect(templateContrastErrors(t)).toEqual([]); });
+  it("config padrão é válida; cor sem contraste, javascript: e http: são rejeitados", () => {
+    const c = defaultSiteConfig("Oficina Teste");
+    expect(validateSiteConfig(c, "moderno")).toEqual([]);
+    expect(validateSiteConfig({ ...c, theme: { primaryColor: "#ffff00" } }, "moderno").join()).toMatch(/contraste/);
+    expect(validateSiteConfig({ ...c, business: { ...c.business, instagram: "javascript:alert(1)" } }, "moderno").join()).toMatch(/https/);
+    expect(validateSiteConfig({ ...c, business: { ...c.business, mapUrl: "http://x.test" } }, "moderno").join()).toMatch(/https/);
+    expect(validateSiteConfig(c, "outro").join()).toMatch(/template/);
+    expect(safeHttpsUrl("https://user:pw@x.test")).toBeNull(); expect(safeHttpsUrl("data:text/html,x")).toBeNull(); expect(safeHttpsUrl("https://x.test/a")).toBe("https://x.test/a");
+  });
+  it("bots, opt-out, referrer, whatsapp", () => {
+    expect(isBot("Googlebot/2.1")).toBe(true); expect(isBot(undefined)).toBe(true); expect(isBot("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Safari/604.1")).toBe(false);
+    expect(optedOut({ dnt: "1" })).toBe(true); expect(optedOut({ gpc: "1" })).toBe(true); expect(optedOut({ dnt: "0" })).toBe(false);
+    expect(classifyReferrer(undefined, "a.test")).toBe("direct"); expect(classifyReferrer("https://www.google.com/search?q=x", "a.test")).toBe("search"); expect(classifyReferrer("https://l.instagram.com/?u=x", "a.test")).toBe("social"); expect(classifyReferrer("https://blog.test/p", "a.test")).toBe("other");
+    expect(waLink("(71) 99999-1234")).toBe("https://wa.me/5571999991234");
+  });
+});
