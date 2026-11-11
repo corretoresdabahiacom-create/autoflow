@@ -12,6 +12,7 @@ import { registerEstimateRoutes } from "./routes/estimates";
 import { registerPortalRoutes } from "./routes/portal";
 import { registerPortalAdminRoutes } from "./routes/portal-admin";
 import { registerProductionRoutes } from "./routes/production";
+import { registerFinanceRoutes } from "./routes/finance";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -48,6 +49,7 @@ export function createApp(deps: Deps) {
   registerPortalRoutes(router, deps);
   registerPortalAdminRoutes(router, deps);
   registerProductionRoutes(router, deps);
+  registerFinanceRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

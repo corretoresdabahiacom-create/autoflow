@@ -149,3 +149,41 @@ describe("portal theme", () => {
     expect(validateTheme({ ...DEFAULT_THEME, extra: 1 }).length).toBeGreaterThan(0);
   });
 });
+
+import { allocateProRata, buildDre, discountNeedsOverride, installmentStatus, lateCharges, overheadForOrder, splitCents } from "./finance";
+describe("finance", () => {
+  it("splitCents: resto na última parcela, Σ preservada", () => {
+    expect(splitCents(10000, 3)).toEqual([3333, 3333, 3334]);
+    for (const [t, n] of [[1, 3], [99999, 7], [0, 2], [100, 100]] as const) expect(splitCents(t, n).reduce((a, b) => a + b, 0)).toBe(t);
+  });
+  it("allocateProRata: sem perda de centavos e proporcional", () => {
+    expect(allocateProRata(100, [1, 1, 1])).toEqual([34, 33, 33]);
+    for (let t = 0; t < 300; t += 7) expect(allocateProRata(t, [3, 5, 11, 1]).reduce((a, b) => a + b, 0)).toBe(t);
+    expect(allocateProRata(1000, [70, 30])).toEqual([700, 300]);
+  });
+  it("juros e multa: 2% multa + 1% a.m. pro rata, sem atraso = 0, HALF_EVEN", () => {
+    expect(lateCharges({ principalCents: 10000, dueDate: "2030-01-10", on: "2030-01-10", fineBp: 200, interestBpMonth: 100 })).toMatchObject({ days: 0, fineCents: 0, interestCents: 0 });
+    expect(lateCharges({ principalCents: 10000, dueDate: "2030-01-10", on: "2030-02-09", fineBp: 200, interestBpMonth: 100 })).toMatchObject({ days: 30, fineCents: 200, interestCents: 100 });
+    expect(lateCharges({ principalCents: 150, dueDate: "2030-01-01", on: "2030-01-02", fineBp: 100, interestBpMonth: 100 }).fineCents).toBe(2); // 1,5 → 2 (par)
+    expect(lateCharges({ principalCents: 250, dueDate: "2030-01-01", on: "2030-01-02", fineBp: 100, interestBpMonth: 0 }).fineCents).toBe(2); // 2,5 → 2 (par)
+  });
+  it("status derivado", () => {
+    const b = { amountCents: 100, dueDate: "2030-01-10", cancelled: false };
+    expect(installmentStatus({ ...b, paidCents: 0, today: "2030-01-05" })).toBe("open");
+    expect(installmentStatus({ ...b, paidCents: 40, today: "2030-01-05" })).toBe("partial");
+    expect(installmentStatus({ ...b, paidCents: 40, today: "2030-01-11" })).toBe("overdue");
+    expect(installmentStatus({ ...b, paidCents: 100, today: "2030-01-11" })).toBe("paid");
+    expect(installmentStatus({ ...b, paidCents: 0, today: "2030-01-05", cancelled: true })).toBe("cancelled");
+  });
+  it("alçada de desconto", () => {
+    expect(discountNeedsOverride(10000, 500, 500)).toBe(false);
+    expect(discountNeedsOverride(10000, 501, 500)).toBe(true);
+  });
+  it("DRE e rateio", () => {
+    const d = buildDre({ revenue: 10000, deductions: 500, directCosts: 3000, opex: 2000, financial: 100 });
+    expect(d).toMatchObject({ netRevenue: 9500, contributionMargin: 6500, operatingResult: 4500, managementResult: 4600, label: "gerencial estimado" });
+    expect(overheadForOrder({ method: "revenue", value: 1000 }, { netRevenueCents: 9500, trackedMinutes: 0 })).toBe(950);
+    expect(overheadForOrder({ method: "hours", value: 3000 }, { netRevenueCents: 0, trackedMinutes: 90 })).toBe(4500);
+    expect(overheadForOrder({ method: "fixed", value: 700 }, { netRevenueCents: 0, trackedMinutes: 0 })).toBe(700);
+  });
+});

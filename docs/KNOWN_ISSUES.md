@@ -33,3 +33,12 @@
 | KI-029 | Conflito de box usa janela **planejada** (`planned_start/end`); tempo real excedendo o planejado não bloqueia o box seguinte. Lista de espera e conflitos avançados: Fase 9 | P3 | Planejado |
 | KI-030 | Custo/hora (`employee_rates`) por funcionário sem histórico de vigência; `labor` usa a taxa atual. Fase 5 deve versionar | P2 | Planejado (Fase 5) |
 | KI-031 | Mecânico restrito à própria tarefa é regra da **API** (não RLS); isolamento de unidade e tenant segue por RLS | P2 | Risco residual aceito |
+| KI-032 | **Sem UI financeira**: Fase 5 entrega só API (faturar, receber, pagar, caixa, DRE, conciliação, lucro por OS). Nenhum gráfico/tela de dashboard foi feito (e gráficos não contariam como "financeiro pronto") | P2 | Pendente |
+| KI-033 | Valores em **centavos (bigint)** em vez de `numeric(14,2)` de FINANCIAL_RULES §1 (decisão D-004; consistente com Fase 2). Arredondamento HALF_EVEN só nas regras de juros/multa/overhead | P3 | Documentado |
+| KI-034 | Juros/multa: regra **v1** simples (multa única % + juros simples pro rata die, mês de 30 dias), parâmetros por tenant sem histórico de vigência; desconto na quitação, abatimentos e renegociação **não implementados** | P2 | Planejado |
+| KI-035 | Estorno de recebimento libera a parcela, mas **não estorna** o vínculo com documentos fiscais (fora de escopo). Competência de estorno = data do estorno (não retroage o mês original) | P3 | Documentado |
+| KI-036 | Mão de obra no lucro por OS é **estimada** (tempo apontado × custo/hora atual) e não gera lançamento no ledger (evita duplicar folha). DRE de competência não inclui mão de obra a menos que a folha seja lançada como despesa/custo | P2 | Documentado |
+| KI-037 | Conciliação básica: importação de extrato via JSON (sem OFX/CSV), sugestão por valor + janela de ±3 dias; sem conciliação de lote (1 linha = 1 lançamento) | P3 | Planejado |
+| KI-038 | Comprovantes (anexos) de contas a pagar e "compromisso comercial" informativo na aprovação **não implementados** (anexos hoje exigem OS) | P3 | Planejado |
+| KI-039 | Recebimento manual apenas (gateway só na Fase 8). Concorrência validada com bloqueio por documento + advisory lock de idempotência, **não** sob carga real nem com pooling (Hyperdrive) — KI-014 | P2 | Validar em staging |
+| KI-040 | Alçadas (desconto/estorno) são por **permissão + limite do tenant**; fluxo de aprovação em duas pessoas (solicitar → aprovar) não existe | P3 | Planejado |

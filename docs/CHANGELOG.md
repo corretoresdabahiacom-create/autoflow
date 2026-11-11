@@ -1,5 +1,13 @@
 # Changelog
 
+## [Fase 5] — 2026-11-11
+### Adicionado
+- Migração 0007: plano de contas, centros de custo, carteiras, **ledger append-only** (txn + lançamentos, partida dobrada verificada no commit, estorno por `reversal_of` único), documentos a receber/pagar, parcelas (Σ = líquido verificada no commit), liquidações com alocações e idempotência, conciliação, permissões `finance:*`.
+- API: faturamento (OS entregue, só itens aprovados, desconto com alçada), contas a pagar (com recorrência mensal), recebimentos/pagamentos idempotentes e serializados, juros/multa v1, estornos/cancelamento por alçada, transferências, conciliação, DRE (competência e caixa), fluxo de caixa (realizado e projetado), saldos, dashboard e lucro por OS (margem de contribuição × resultado operacional estimado).
+- `@autoflow/shared/finance`: splitCents, allocateProRata, lateCharges, installmentStatus, buildDre, overheadForOrder (21 testes).
+### Alterado
+- Teste C5 (Fase 2): agora afirma que aprovar não cria lançamento no ledger.
+
 ## [Fase 4] — 2026-11-10
 ### Adicionado
 - Migração 0006: etapas configuráveis, histórico de etapas (append-only), boxes, custo/hora, tarefas (EXCLUDE de box), tempo apontado (trabalho/pausa com motivo), agenda (EXCLUDE de box), `attachments.task_id`, permissões `production:*` e `schedule:*`.

@@ -174,8 +174,7 @@ describe("C4 aprovações e herança", () => {
     const after = await snapshot();
     const changed = Object.keys(after).filter((k) => after[k] !== before[k]).sort();
     expect(changed).toEqual(["approvals", "audit_log", "outbox", "os_timeline"].sort()); // Fase 3: timeline + outbox transacionais; nada financeiro
-    const fin = await ownerSql("select table_name from information_schema.tables where table_schema='public' and table_name ~ 'receiv|receipt|ledger|payment|installment'");
-    expect(fin).toHaveLength(0); // não existe estrutura financeira nesta fase
+    expect(await ownerSql("select 1 from ledger_txns where tenant_id = $1", [t.tenantId])).toHaveLength(0); // aprovação não gera lançamento financeiro (Fase 5, critério 3)
   });
 });
 
