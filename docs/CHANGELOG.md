@@ -1,5 +1,14 @@
 # Changelog
 
+## [Fase 7] — 2026-11-12
+### Adicionado
+- Migração 0009: fornecedores, itens, compras, movimentos de estoque (append-only), saldo derivado por trigger, consentimento de marketing auditável, cupons, fidelidade, indicações, lembretes, campanhas, satisfação; permissões `stock:*`, `crm:*`, `campaigns:manage`.
+- Estoque: compras com custo médio móvel, reserva/consumo/devolução por OS, inventário com ajustes, mínimo, código de barras, auditoria de consistência; integração com ledger/DRE/lucro por OS.
+- CRM: conversão de lead (cliente/veículo/agendamento/OS), opt-out (staff e link público), campanhas (inativos, orçamentos parados, lembretes) só para consentidos, cupons, pontos, indicações, lembretes, NPS, métricas reconciliadas com o ledger.
+- Web: telas mínimas Estoque e CRM.
+### Alterado
+- Ledger aceita `kind = 'stock'`; plano de contas ganha Estoque e GRNI (criados sob demanda); `lead_events` aceita `converted`.
+
 ## [Fase 6] — 2026-11-11
 ### Adicionado
 - Migração 0008: versões do site (rascunho/publicado/substituído), mídia, leads (funil Novo→Perdido), eventos de lead (append-only), mídia de lead, estatísticas diárias anônimas; permissões `site:manage`, `leads:read`, `leads:manage`; políticas RLS de leitura pública estreitas.

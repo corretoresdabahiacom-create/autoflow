@@ -51,3 +51,14 @@
 | KI-047 | UI de Presença Digital é **mínima**: edição do site por JSON validado (não há editor visual WYSIWYG, nem upload de mídia/histórico/restauração na UI — API pronta e testada). Leads: lista + troca de status | P2 | Planejado |
 | KI-048 | Ator RLS `public` (leitura sem sessão) tem políticas estreitas (tenant ativo/trial, versão publicada, mídia), mas a **gravação do lead** muda para contexto de tenant após buscar o slug (mesmo risco residual de KI-011/KI-021) | P2 | Risco residual aceito |
 | KI-049 | Imagens servidas como enviadas (≤5 MB, validadas por magic bytes): **sem redimensionamento/srcset/WebP** automáticos; pode afetar Performance no Lighthouse | P2 | Planejado |
+| KI-050 | Compra (entrada de estoque) lança D Estoque / C "Compras a faturar (GRNI)"; **não gera contas a pagar/parcelas** nem concilia com NF do fornecedor — o pagamento ao fornecedor segue o fluxo de payables da Fase 5 separadamente (risco de lançamento em duplicidade se o usuário lançar a NF também como despesa) | P1 | Planejado |
+| KI-051 | Compras são imutáveis (append-only): correção por ajuste de inventário; sem cancelamento/estorno de compra nem devolução ao fornecedor | P2 | Planejado |
+| KI-052 | Sem transferência entre unidades, sem lote/validade, sem leitor de código de barras na UI (a API busca por código) | P2 | Planejado |
+| KI-053 | Consumo/reserva exigem OS `open`; estoque da unidade da OS. `stock:consume` limitado a estoquista/gerência (mecânico não consome pelo app ainda) | P2 | Decisão de projeto |
+| KI-054 | Cupom **não é aplicado automaticamente** na fatura: `/crm/coupons/redeem` registra o uso e devolve o desconto; o operador informa o desconto na fatura (sujeito à alçada). Pontos resgatados também não viram desconto automático | P1 | Planejado |
+| KI-055 | Campanhas só por e-mail (WhatsApp na Fase 8 — REM-001); provedor de e-mail real pendente (KI-010). Link de opt-out no e-mail depende de o template "notification" renderizar `optOutUrl` (variável enviada, template real não validado) | P1 | Bloqueado (KI-010) |
+| KI-056 | Satisfação registrada pela equipe (sem pesquisa automática ao cliente/portal); NPS simples | P2 | Planejado |
+| KI-057 | Recuperação de orçamento/inativos são consultas on-demand (sem agendador automático de campanhas/lembretes); lembretes não geram envio sozinhos | P2 | Planejado (Fase 8/9) |
+| KI-058 | UI de Estoque e CRM mínima (só leitura de saldos/métricas/lembretes e prévia/disparo de campanha); cadastro e movimentos via API | P2 | Planejado |
+| KI-059 | `stock_levels` recebe `UPDATE(updated_at)` para `SELECT … FOR UPDATE`; saldo só muda via trigger SECURITY DEFINER (testado: UPDATE direto falha) | P3 | Risco residual aceito |
+| KI-060 | Pontos/lembretes/indicação: regras simples (1 pt/R$ configurável; bônus fixo de indicação na 1ª OS faturada); sem expiração de pontos nem antifraude de indicação | P2 | Planejado |

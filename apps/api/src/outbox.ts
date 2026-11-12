@@ -1,3 +1,4 @@
+import { optOutPath } from "./optout";
 import type { Deps } from "./types";
 
 const MAX_ATTEMPTS = 5;
@@ -10,6 +11,24 @@ export async function processOutbox(deps: Deps, tenantId: string, limit = 50): P
     q.many<{ id: string; os_id: string | null; kind: string; payload: { title?: string }; attempts: number }>(
       "select id, os_id, kind, payload, attempts from outbox where status = 'pending' and available_at <= now() order by id limit $1 for update skip locked", [limit]));
   for (const row of rows) {
+    if (row.kind === "campaign") {
+      // Marketing: consentimento e opt-out reverificados NO ENVIO (opt-out é imediato mesmo com a campanha já enfileirada).
+      const cid = String((row.payload as { customerId?: string }).customerId ?? "");
+      const cu = await deps.db.tx(ctx, (q) => q.one<{ email: string | null; opt: boolean }>("select email::text email, marketing_opt_in opt from customers where id = $1", [cid]));
+      if (!cu || !cu.opt || !cu.email) {
+        await deps.db.tx(ctx, (q) => q.query("update outbox set status = 'skipped', last_error = $2 where id = $1", [row.id, !cu?.opt ? "opted_out" : "no_email"])); res.skipped++; continue;
+      }
+      try {
+        const link = `${deps.config.publicBaseUrl}${await optOutPath(deps.config.encryptionKey, tenantId, cid)}`;
+        await deps.email.send({ to: cu.email, template: "notification", vars: { title: String(row.payload.title ?? "Novidades da oficina"), optOutUrl: link } });
+        await deps.db.tx(ctx, (q) => q.query("update outbox set status = 'sent', attempts = attempts + 1 where id = $1", [row.id])); res.sent++;
+      } catch (e) {
+        const attempts = row.attempts + 1;
+        await deps.db.tx(ctx, (q) => q.query(`update outbox set attempts = $2, last_error = $3, status = case when $2 >= $4 then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
+        res.failed++;
+      }
+      continue;
+    }
     if (row.kind === "lead.new") {
       // Notificação interna para a equipe (não depende de consentimento do cliente).
       const staff = await deps.db.tx(ctx, (q) => q.many<{ email: string }>(

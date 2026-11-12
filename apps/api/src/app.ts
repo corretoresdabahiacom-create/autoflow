@@ -15,6 +15,8 @@ import { registerProductionRoutes } from "./routes/production";
 import { registerFinanceRoutes } from "./routes/finance";
 import { registerSitePublicRoutes } from "./routes/site-public";
 import { registerSiteAdminRoutes } from "./routes/site-admin";
+import { registerCrmRoutes } from "./routes/crm";
+import { registerStockRoutes } from "./routes/stock";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -33,7 +35,7 @@ export function createApp(deps: Deps) {
   app.use("*", async (c, next) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
       const origin = c.req.header("origin");
-      const publicOrigin = c.req.path.startsWith("/o/") && c.req.path.endsWith("/lead") && origin === new URL(deps.config.publicBaseUrl).origin;
+      const publicOrigin = ((c.req.path.startsWith("/o/") && c.req.path.endsWith("/lead")) || c.req.path.startsWith("/optout/")) && origin === new URL(deps.config.publicBaseUrl).origin;
       if (!origin || (!deps.config.allowedOrigins.includes(origin) && !publicOrigin)) {
         throw new HttpError(403, "origin_not_allowed");
       }
@@ -55,6 +57,8 @@ export function createApp(deps: Deps) {
   registerFinanceRoutes(router, deps);
   registerSitePublicRoutes(router, deps);
   registerSiteAdminRoutes(router, deps);
+  registerStockRoutes(router, deps);
+  registerCrmRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

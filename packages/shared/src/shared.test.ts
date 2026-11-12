@@ -207,3 +207,30 @@ describe("site", () => {
     expect(waLink("(71) 99999-1234")).toBe("https://wa.me/5571999991234");
   });
 });
+
+import { applyIn, applyOut, outCost, returnCost, avgUnitCostCents, parseQtyMilli, loyaltyPoints, couponDiscount, addDays } from "./stock";
+describe("estoque: custo médio móvel", () => {
+  it("entradas, saídas, devolução e saída total sem resíduo", () => {
+    let s = { onHandMilli: 0, valueCents: 0 };
+    s = applyIn(s, 10_000, 10_000); // 10 un a R$ 10,00
+    s = applyIn(s, 10_000, 14_000); // 10 un a R$ 14,00 => médio R$ 12,00
+    expect(avgUnitCostCents(s)).toBe(1200);
+    const o = applyOut(s, 5_000); expect(o.costCents).toBe(6000); s = o.state; expect(s).toEqual({ onHandMilli: 15_000, valueCents: 18_000 });
+    expect(returnCost(5_000, 6000, 2_000)).toBe(2400);
+    s = applyIn(s, 2_000, 2400); expect(avgUnitCostCents(s)).toBe(1200);
+    const all = applyOut(s, 17_000); expect(all.state).toEqual({ onHandMilli: 0, valueCents: 0 }); expect(all.costCents).toBe(20_400);
+  });
+  it("arredondamento, limites e validações", () => {
+    expect(outCost({ onHandMilli: 3000, valueCents: 100 }, 1000)).toBe(33);
+    expect(outCost({ onHandMilli: 3000, valueCents: 200 }, 1000)).toBe(67);
+    expect(() => outCost({ onHandMilli: 1000, valueCents: 100 }, 2000)).toThrow("insufficient_stock");
+    expect(() => outCost({ onHandMilli: 1000, valueCents: 100 }, 0)).toThrow();
+    expect(() => returnCost(1000, 100, 2000)).toThrow();
+    expect(parseQtyMilli(1.25)).toBe(1250); expect(() => parseQtyMilli(0.0001)).toThrow(); expect(() => parseQtyMilli(-1)).toThrow();
+  });
+  it("pontos, cupom e datas", () => {
+    expect(loyaltyPoints(12_345, 1)).toBe(123); expect(loyaltyPoints(-5, 2)).toBe(0);
+    expect(couponDiscount("percent", 10, 15_000)).toBe(1500); expect(couponDiscount("fixed", 99_999, 15_000)).toBe(15_000);
+    expect(addDays("2026-12-20", 15)).toBe("2027-01-04");
+  });
+});

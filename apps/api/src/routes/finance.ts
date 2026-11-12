@@ -22,16 +22,16 @@ const SYSTEM_ACCOUNTS: [string, string, string, string][] = [
   ["revenue_services", "4.1.01", "Receita de serviços", "revenue"], ["revenue_parts", "4.1.02", "Receita de peças e outros", "revenue"],
   ["deductions", "4.9.01", "Descontos concedidos", "deduction"], ["interest_income", "7.1.01", "Juros e multa recebidos", "financial"],
   ["cost_parts", "5.1.01", "Peças", "direct_cost"], ["cost_materials", "5.1.02", "Materiais", "direct_cost"],
-  ["cost_third_party", "5.1.03", "Serviços terceirizados", "direct_cost"], ["cost_other_direct", "5.1.09", "Outros custos diretos", "direct_cost"],
+  ["cost_third_party", "5.1.03", "Serviços terceirizados", "direct_cost"], ["inventory", "1.1.03", "Estoque", "asset"], ["grni", "2.1.02", "Compras a faturar (estoque)", "liability"], ["cost_other_direct", "5.1.09", "Outros custos diretos", "direct_cost"],
   ["exp_rent", "6.1.01", "Aluguel", "expense"], ["exp_utilities", "6.1.02", "Energia, água e internet", "expense"],
   ["exp_payroll", "6.1.03", "Folha e encargos", "expense"], ["exp_taxes", "6.1.04", "Impostos e taxas", "expense"], ["exp_other", "6.1.09", "Outras despesas", "expense"],
 ];
 
-async function ensureChart(q: Q, tenantId: string) {
+export async function ensureChart(q: Q, tenantId: string) {
   const n = await q.one<{ n: number }>("select count(*)::int n from fin_accounts where system_key is not null");
-  if (n!.n === 0) for (const [k, code, name, type] of SYSTEM_ACCOUNTS) await q.query("insert into fin_accounts (tenant_id, code, name, type, system_key) values ($1,$2,$3,$4,$5) on conflict do nothing", [tenantId, code, name, type, k]);
+  if (n!.n < SYSTEM_ACCOUNTS.length) for (const [k, code, name, type] of SYSTEM_ACCOUNTS) await q.query("insert into fin_accounts (tenant_id, code, name, type, system_key) values ($1,$2,$3,$4,$5) on conflict do nothing", [tenantId, code, name, type, k]);
 }
-async function sysAcc(q: Q, key: string): Promise<string> {
+export async function sysAcc(q: Q, key: string): Promise<string> {
   const a = await q.one<{ id: string }>("select id from fin_accounts where system_key = $1", [key]);
   if (!a) throw new HttpError(500, "chart_missing");
   return a.id;
@@ -41,9 +41,9 @@ async function settings(q: Q, tenantId: string) {
   return (await q.one<any>("select * from fin_settings"))!;
 }
 
-interface Entry { account: string; side: "D" | "C"; amount: number; costCenterId?: string | null }
-interface Txn { tenantId: string; unitId: string; kind: string; competence?: string; cash?: string | null; description: string; osId?: string | null; userId: string; entries: Entry[] }
-async function postTxn(q: Q, t: Txn): Promise<string> {
+export interface Entry { account: string; side: "D" | "C"; amount: number; costCenterId?: string | null }
+export interface Txn { tenantId: string; unitId: string; kind: string; competence?: string; cash?: string | null; description: string; osId?: string | null; userId: string; entries: Entry[] }
+export async function postTxn(q: Q, t: Txn): Promise<string> {
   const x = await q.one<{ id: string }>(
     `insert into ledger_txns (tenant_id, unit_id, kind, competence_date, cash_date, description, os_id, created_by)
      values ($1,$2,$3, coalesce($4::date, ${TODAY}), $5, $6, $7, $8) returning id`,
@@ -476,6 +476,12 @@ export function registerFinanceRoutes(r: Router, deps: Deps): void {
       const costs = await q.many<{ type: string; name: string; s: string }>(
         `select a.system_key as type, a.name, sum(d.net_cents)::bigint s from fin_documents d join fin_accounts a on a.tenant_id = d.tenant_id and a.id = d.account_id
           where d.os_id = $1 and d.kind = 'payable' and d.cancelled_at is null group by a.system_key, a.name`, [osId]);
+      // Consumo de estoque (custo médio) lançado no ledger com os_id: débitos − créditos (devoluções) em contas de custo direto.
+      const stockCost = await q.one<{ s: string }>(
+        `select coalesce(sum(case e.side when 'D' then e.amount_cents else -e.amount_cents end),0)::bigint s
+           from ledger_txns t join ledger_entries e on e.tenant_id = t.tenant_id and e.txn_id = t.id join fin_accounts a on a.tenant_id = e.tenant_id and a.id = e.account_id
+          where t.os_id = $1 and t.kind = 'stock' and a.type = 'direct_cost'`, [osId]);
+      if (N(stockCost!.s) !== 0) costs.push({ type: "stock", name: "Estoque (consumo)", s: String(N(stockCost!.s)) });
       const lab = await q.one<{ minutes: string; cost: string; missing: boolean }>(
         `select coalesce(sum(extract(epoch from (coalesce(e.ended_at, now()) - e.started_at))/60),0)::bigint minutes,
                 coalesce(sum(extract(epoch from (coalesce(e.ended_at, now()) - e.started_at)) * er.hourly_cost_cents / 3600),0)::bigint cost,
