@@ -1,17 +1,22 @@
 # ADR-0006 — Modelo comercial do WhatsApp
 
-Status: **ADIADO PARA A FASE 8 — requer aprovação**
+Status: **PROPOSTO (Fase 8) — aguardando sua aprovação; produção bloqueada por aprovação/verificação na Meta.**
 
-## Opções
-1. **WABA individual por oficina via Embedded Signup** (a oficina é dona da conta/número; AutoFlow como Tech Provider).
-2. Modelo provedor (BSP/Tech Provider) com WABA(s) gerenciadas pelo AutoFlow.
-3. Intermediário já certificado (revenda de API) — menor esforço, maior custo/dependência.
+## Levantamento (fonte oficial, 2026-11-12) — https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing
+- Cobrança **por mensagem** desde 1/7/2025 (conversas deixaram de ser a unidade). Só mensagens **template entregues** são cobradas; categorias: marketing, utilidade, autenticação. Preço varia por categoria, faixa de volume e país.
+- **Janela de atendimento de 24h** (após o cliente escrever): mensagens livres são gratuitas e templates de utilidade enviados dentro dela também. Fora dela, só templates. Janela de ponto de entrada gratuito (anúncio Click-to-WhatsApp): 72h.
+- **Moeda BRL**: a Meta publica tabela em BRL; a partir de 1/7/2026 só clientes elegíveis (Brasil) criam WABAs novas em BRL e a migração de todas é obrigatória até 30/6/2027 (faturamento pela Facebook Brasil).
+- **Não verificado**: os valores em R$ por categoria/faixa (estão na tabela de tarifas linkada pela Meta, que não foi lida aqui).
 
-## Recomendação provisória
-Opção 1 como alvo (propriedade clara do número/conta, custo de conversas repassado à oficina, desconexão limpa). Depende de aprovação de app e verificação de negócio na Meta — **bloqueio externo**.
+## Opções e recomendação (a aprovar)
+Opção 1 (WABA da própria oficina via Embedded Signup; AutoFlow como Tech Provider) segue como alvo: a conta/número é da oficina, o custo por mensagem é dela e a desconexão é limpa. Exige app aprovado e verificação de negócio (externo). Alternativa de menor esforço: intermediário (BSP), com custo/dependência maiores.
 
-## Até lá
-- **Link de conversa** (`wa.me`) — funciona hoje, não é API oficial, sem envio automático, sem templates.
-- Adaptador `MessagingProvider` com sandbox e mocks; nenhum envio real simulado como produção.
-- Definições necessárias: propriedade da conta, token por tenant (cifrado, com rotação), templates e aprovação, webhooks (verificação de assinatura), limites de envio, permissões por papel, desconexão e revogação, opt-in/opt-out (LGPD).
-- Funcionalidades bloqueadas sem credenciais: envio de templates, recebimento de mensagens, status de entrega, campanhas.
+## Implementado
+- `WhatsAppProvider` com **Sandbox** (não envia nada) e adaptador **Cloud API** (código pronto, **não validado contra a Meta**).
+- Token por tenant cifrado (AES-GCM), rotação versionada, desconexão que apaga o segredo e cancela envios pendentes.
+- Envio **somente de templates** via outbox (backoff); marketing exige consentimento reverificado no envio.
+- Webhook: verificação do desafio, assinatura `X-Hub-Signature-256` sobre o corpo bruto, `event_id` único (replay sem efeito), status sent/delivered/read sem regressão, e "PARAR" revoga o consentimento de marketing (auditável).
+- Resolução de tenant pelo `phone_number_id` por função SECURITY DEFINER estreita (devolve só o id).
+
+## Bloqueado por dependência externa
+Embedded Signup, aprovação de templates, número verificado e qualquer envio real. "Sandbox validado" **não** equivale a "produção validada".

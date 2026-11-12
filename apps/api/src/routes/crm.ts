@@ -15,6 +15,18 @@ const N = (v: unknown) => Number(v ?? 0);
 const TODAY = "(now() at time zone 'America/Sao_Paulo')::date";
 const optOutHtml = (msg: string, form?: string) => `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Preferências de contato</title></head><body style="font:16px system-ui;max-width:32rem;margin:2rem auto;padding:0 1rem"><h1>Preferências de contato</h1><p>${msg}</p>${form ?? ""}</body></html>`;
 
+/** Registra consentimento de marketing (log por trigger). Opt-out cancela pendências imediatamente. */
+export const setConsent = async (q: Q, tenantId: string, customerId: string, optIn: boolean, source: string) => {
+  await q.query("select set_config('app.consent_source', $1, true)", [source]);
+  const x = await q.query("update customers set marketing_opt_in = $2 where id = $1", [customerId, optIn]);
+  if (x.rowCount !== 1) throw notFound("customer_not_found");
+  if (!optIn) {
+    // Imediato: nada pendente é enviado depois do opt-out.
+    await q.query("update outbox set status = 'skipped', last_error = 'opted_out' where status = 'pending' and kind = 'campaign' and payload->>'customerId' = $1", [customerId]);
+    await q.query("update service_reminders set status = 'cancelled' where customer_id = $1 and status in ('pending','queued')", [customerId]);
+  }
+};
+
 export function registerCrmRoutes(r: Router, deps: Deps): void {
   const READ = { auth: "tenant", permission: "crm:read" } as const;
   const MANAGE = { auth: "tenant", permission: "crm:manage" } as const;
@@ -74,16 +86,6 @@ export function registerCrmRoutes(r: Router, deps: Deps): void {
   });
 
   // ===== Consentimento / opt-out (auditável) =====
-  const setConsent = async (q: Q, tenantId: string, customerId: string, optIn: boolean, source: string) => {
-    await q.query("select set_config('app.consent_source', $1, true)", [source]);
-    const x = await q.query("update customers set marketing_opt_in = $2 where id = $1", [customerId, optIn]);
-    if (x.rowCount !== 1) throw notFound("customer_not_found");
-    if (!optIn) {
-      // Imediato: nada pendente é enviado depois do opt-out.
-      await q.query("update outbox set status = 'skipped', last_error = 'opted_out' where status = 'pending' and kind = 'campaign' and payload->>'customerId' = $1", [customerId]);
-      await q.query("update service_reminders set status = 'cancelled' where customer_id = $1 and status in ('pending','queued')", [customerId]);
-    }
-  };
   r.post("/crm/customers/:id/consent", MANAGE, async (c) => {
     const p = c.get("tenant"); const id = uuid.parse(c.req.param("id")); const b = await parseJson(c, z.object({ optIn: z.boolean(), source: z.enum(["staff", "phone", "whatsapp", "in_person"]).default("staff") }));
     await tx(p, (q) => setConsent(q, p.tenantId, id, b.optIn, b.source));

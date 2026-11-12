@@ -30,3 +30,17 @@ Documentos do AutoFlow são **operacionais**, não fiscais. Arquitetura prevê f
 
 ## 6. Inventário de credenciais futuras
 Cloudflare (API token, R2, Queues, Hyperdrive) · PostgreSQL (strings de conexão por ambiente) · e-mail · Meta/WhatsApp · gateway(s) · Turnstile · Sentry/observabilidade · VAPID keys · provedor de mapas (opcional).
+
+
+## 7. Estado após a Fase 8 (2026-11-12)
+| Integração | Código | Testado | Produção |
+|---|---|---|---|
+| WhatsApp (Cloud API) | adaptador + webhook + outbox | sandbox ponta a ponta | **Bloqueado** (Meta: app, verificação, templates) |
+| Pagamentos de clientes (PaymentProvider) | cobrança hospedada + webhook → ledger | sandbox | **Bloqueado** (gateway não aprovado — ADR-0005) |
+| Billing de assinaturas | trial/upgrade/downgrade/cancelar/inadimplência | job `runBilling` + sandbox | **Bloqueado** (cobrança real depende do gateway; preços dos planos = R$ 0, decisão sua) |
+| E-mail | interface + memória | sim | **Bloqueado** (KI-010) |
+| Web Push | assinaturas + provider em memória | sim | **Bloqueado** (chaves VAPID + biblioteca de envio) |
+| Mapas | só link (Fase 6) | sim | n/a |
+| Webhooks | assinatura, `event_id` único, DLQ, reprocessamento | sim | n/a |
+
+Variáveis: `META_APP_SECRET`, `WA_VERIFY_TOKEN`, `META_GRAPH_VERSION`, `SANDBOX_WEBHOOK_SECRET` (só dev/teste), `VAPID_PUBLIC_KEY`. Agendamento do job de billing/retentativas de webhook: externo (cron chamando `POST /platform/billing/run`) — não configurado.

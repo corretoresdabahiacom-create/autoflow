@@ -15,6 +15,8 @@ import { registerProductionRoutes } from "./routes/production";
 import { registerFinanceRoutes } from "./routes/finance";
 import { registerSitePublicRoutes } from "./routes/site-public";
 import { registerSiteAdminRoutes } from "./routes/site-admin";
+import { registerBillingRoutes } from "./routes/billing";
+import { registerIntegrationRoutes } from "./routes/integrations";
 import { registerCrmRoutes } from "./routes/crm";
 import { registerStockRoutes } from "./routes/stock";
 import type { AppEnv, Deps } from "./types";
@@ -33,7 +35,7 @@ export function createApp(deps: Deps) {
 
   // CSRF: métodos mutáveis exigem Origin explicitamente permitida (cookies são SameSite=Lax).
   app.use("*", async (c, next) => {
-    if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method) && !c.req.path.startsWith("/webhooks/")) { // /webhooks/*: sem cookies; autenticidade = assinatura do corpo
       const origin = c.req.header("origin");
       const publicOrigin = ((c.req.path.startsWith("/o/") && c.req.path.endsWith("/lead")) || c.req.path.startsWith("/optout/")) && origin === new URL(deps.config.publicBaseUrl).origin;
       if (!origin || (!deps.config.allowedOrigins.includes(origin) && !publicOrigin)) {
@@ -59,6 +61,8 @@ export function createApp(deps: Deps) {
   registerSiteAdminRoutes(router, deps);
   registerStockRoutes(router, deps);
   registerCrmRoutes(router, deps);
+  registerIntegrationRoutes(router, deps);
+  registerBillingRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

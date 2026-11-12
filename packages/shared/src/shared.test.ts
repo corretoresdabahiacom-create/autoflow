@@ -234,3 +234,20 @@ describe("estoque: custo médio móvel", () => {
     expect(addDays("2026-12-20", 15)).toBe("2027-01-04");
   });
 });
+
+import { addMonths, dunning, prorateUpgrade, backoffSeconds, GRACE_DAYS } from "./billing";
+describe("billing: regras puras", () => {
+  it("meses, proração e inadimplência", () => {
+    expect(addMonths("2026-01-31", 1)).toBe("2026-02-28"); expect(addMonths("2026-12-15", 12)).toBe("2027-12-15");
+    expect(prorateUpgrade(10000, 20000, "2026-11-01", "2026-12-01", "2026-11-16")).toBe(5000 * 1); // 15 dias restantes de 30 => metade de 10000
+    expect(prorateUpgrade(20000, 10000, "2026-11-01", "2026-12-01", "2026-11-16")).toBe(0);
+    const due = Date.parse("2026-11-10T00:00:00Z"), D = 86400000;
+    expect(dunning({ status: "active", oldestOpenDueMs: null, graceUntilMs: null, nowMs: due })).toEqual({ action: "none" });
+    expect(dunning({ status: "active", oldestOpenDueMs: due, graceUntilMs: null, nowMs: due - 1 })).toEqual({ action: "none" });
+    expect(dunning({ status: "active", oldestOpenDueMs: due, graceUntilMs: null, nowMs: due + D })).toEqual({ action: "past_due", graceUntilMs: due + GRACE_DAYS * D });
+    expect(dunning({ status: "past_due", oldestOpenDueMs: due, graceUntilMs: due + GRACE_DAYS * D, nowMs: due + 3 * D })).toEqual({ action: "none" });
+    expect(dunning({ status: "past_due", oldestOpenDueMs: due, graceUntilMs: due + GRACE_DAYS * D, nowMs: due + GRACE_DAYS * D })).toEqual({ action: "suspend" });
+    expect(dunning({ status: "suspended", oldestOpenDueMs: due, graceUntilMs: null, nowMs: due + 99 * D })).toEqual({ action: "none" });
+    expect(backoffSeconds(1)).toBe(30); expect(backoffSeconds(20)).toBe(3600);
+  });
+});

@@ -5,6 +5,7 @@ import { MemoryEmailProvider } from "../src/email";
 import { MemoryStorage } from "../src/storage";
 import { MemoryOtpChannel } from "../src/otp";
 import { MemoryCaptcha } from "../src/captcha";
+import { MemoryPush, SandboxPayments, SandboxWhatsApp } from "../src/providers";
 import { hashPassword } from "../src/password";
 import { newTotpSecret, totpAtStep, totpStepNow, encryptSecret } from "../src/crypto";
 
@@ -24,8 +25,9 @@ export function makeHarness() {
   const storage = new MemoryStorage();
   const otp = new MemoryOtpChannel();
   const captcha = new MemoryCaptcha();
-  const { app, registry } = createApp({ config, db, email, storage, otp, captcha });
-  return { config, db, email, storage, otp, captcha, app, registry };
+  const whatsapp = new SandboxWhatsApp(); const payments = new SandboxPayments(config); const push = new MemoryPush();
+  const { app, registry } = createApp({ config, db, email, storage, otp, captcha, whatsapp, payments, push });
+  return { config, db, email, storage, otp, captcha, whatsapp, payments, push, app, registry };
 }
 export type Harness = ReturnType<typeof makeHarness>;
 
@@ -54,6 +56,7 @@ export class Client {
   post = (p: string, b?: unknown) => this.req("POST", p, b ?? {});
   patch = (p: string, b?: unknown) => this.req("PATCH", p, b ?? {});
   put = (p: string, b?: unknown) => this.req("PUT", p, b ?? {});
+  delete = (p: string, b?: unknown) => this.req("DELETE", p, b);
 }
 
 let counter = 0;

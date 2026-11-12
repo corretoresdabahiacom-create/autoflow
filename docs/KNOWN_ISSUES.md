@@ -62,3 +62,15 @@
 | KI-058 | UI de Estoque e CRM mínima (só leitura de saldos/métricas/lembretes e prévia/disparo de campanha); cadastro e movimentos via API | P2 | Planejado |
 | KI-059 | `stock_levels` recebe `UPDATE(updated_at)` para `SELECT … FOR UPDATE`; saldo só muda via trigger SECURITY DEFINER (testado: UPDATE direto falha) | P3 | Risco residual aceito |
 | KI-060 | Pontos/lembretes/indicação: regras simples (1 pt/R$ configurável; bônus fixo de indicação na 1ª OS faturada); sem expiração de pontos nem antifraude de indicação | P2 | Planejado |
+| KI-061 | WhatsApp real **não validado**: adaptador Cloud API sem credenciais/app aprovado; templates sem aprovação; Embedded Signup não implementado (conexão manual por token via API) | P0 | Bloqueado (Meta) |
+| KI-062 | Gateway de pagamentos real **não integrado** (ADR-0005 proposto, aguardando aprovação); só sandbox. Taxas de Mercado Pago/Stripe BR/Pagar.me **não verificadas** | P0 | Bloqueado (decisão + credenciais) |
+| KI-063 | Valores em R$ por mensagem da Meta não verificados (tabela BRL não lida) | P2 | Planejado |
+| KI-064 | Planos têm preço R$ 0 no seed: billing só foi testado com preços definidos pelo teste. **Defina os preços** | P1 | Decisão pendente do usuário |
+| KI-065 | `runBilling` e `retryDue` não têm agendador (precisam de cron externo chamando `/platform/billing/run`); sem alertas/notificações de fatura/inadimplência ao dono | P1 | Planejado |
+| KI-066 | Proração do upgrade assume período de 30 dias (plano anual não proporcional corretamente) e não cobre downgrade com crédito | P2 | Planejado |
+| KI-067 | Web Push: sem chaves VAPID nem biblioteca de envio; produção usa `UnconfiguredPush` (503). Teste com `MemoryPush` | P2 | Bloqueado (chaves) |
+| KI-068 | Cobrança online quota juros/multa na criação; se o pagamento chegar em dia diferente, o valor recebido é o cotado (`quoted_on`); divergência de valor vai para DLQ e exige tratamento manual | P2 | Aceito |
+| KI-069 | Webhook de pagamento aceita um único provedor ativo (`deps.payments.name`); sem rotação do segredo de webhook por tenant | P2 | Planejado |
+| KI-070 | WhatsApp: sem janela de 24h/mensagem livre, sem tratamento de mídia, sem fila de atendimento (só templates + status + "PARAR") | P2 | Planejado |
+| KI-071 | `wa_lookup_by_definer` (política RLS por `current_user`) e `af.wa_tenant_for_phone` são o único acesso cruzado de tenants para webhooks (risco residual como KI-011/021) | P2 | Risco residual aceito |
+| KI-072 | UI de Integrações/Assinatura mínima (leitura, desconectar, cancelar); conexão/rotação/troca de plano/cobrança só via API | P2 | Planejado |

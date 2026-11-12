@@ -4,6 +4,7 @@ import { loadConfig } from "./config";
 import { Db } from "./db";
 import { LocalDiskStorage, UnconfiguredStorage } from "./storage";
 import { MemoryEmailProvider, UnconfiguredEmailProvider } from "./email";
+import { CloudApiWhatsApp, MemoryPush, SandboxPayments, SandboxWhatsApp, UnconfiguredPayments, UnconfiguredPush } from "./providers";
 import { MemoryCaptcha, TurnstileCaptcha, UnconfiguredCaptcha } from "./captcha";
 import { MemoryOtpChannel, UnconfiguredOtpChannel } from "./otp";
 
@@ -16,7 +17,11 @@ const storage = config.env === "production" ? new UnconfiguredStorage() : new Lo
 // KI-003: canal de OTP real ainda não definido. Produção falha fechada (503) até existir.
 const otp = config.env === "production" ? new UnconfiguredOtpChannel() : new MemoryOtpChannel();
 const captcha = config.env !== "production" ? new MemoryCaptcha() : process.env.TURNSTILE_SECRET ? new TurnstileCaptcha(process.env.TURNSTILE_SECRET) : new UnconfiguredCaptcha();
-const { app } = createApp({ config, db, email, storage, otp, captcha });
+const prod = config.env === "production";
+const whatsapp = prod ? new CloudApiWhatsApp(config.metaGraphVersion) : new SandboxWhatsApp();
+const payments = prod ? new UnconfiguredPayments() : new SandboxPayments(config); // gateway real: ADR-0005 pendente de aprovação/credenciais
+const push = prod ? new UnconfiguredPush() : new MemoryPush();
+const { app } = createApp({ config, db, email, storage, otp, captcha, whatsapp, payments, push });
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
 if (config.logLevel !== "silent") console.log(JSON.stringify({ level: "info", msg: "api up", port }));

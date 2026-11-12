@@ -140,3 +140,9 @@ export async function verifyTotp(
 export function totpUri(account: string, secretB32: string, issuer = "AutoFlow"): string {
   return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(account)}?secret=${secretB32}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
 }
+
+/** HMAC-SHA256 hex de `body` com `secret` (texto). Usado para assinaturas de webhooks. */
+export async function hmacSha256Hex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body))), (x) => x.toString(16).padStart(2, "0")).join("");
+}

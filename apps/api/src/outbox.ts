@@ -1,3 +1,4 @@
+import { decryptSecret } from "./crypto";
 import { optOutPath } from "./optout";
 import type { Deps } from "./types";
 
@@ -11,6 +12,31 @@ export async function processOutbox(deps: Deps, tenantId: string, limit = 50): P
     q.many<{ id: string; os_id: string | null; kind: string; payload: { title?: string }; attempts: number }>(
       "select id, os_id, kind, payload, attempts from outbox where status = 'pending' and available_at <= now() order by id limit $1 for update skip locked", [limit]));
   for (const row of rows) {
+    if (row.kind === "whatsapp") {
+      // WhatsApp: só templates; marketing reverifica consentimento no envio; sem conexão => skipped. Falha => backoff.
+      const pl = row.payload as { waMessageId?: string; params?: string[]; lang?: string };
+      const m = await deps.db.tx(ctx, (q) => q.one<{ id: string; template: string; category: string; to_phone: string; opt: boolean | null; secret_enc: string | null; config: Record<string, string> | null }>(
+        `select m.id, m.template, m.category, m.to_phone, c.marketing_opt_in opt, k.secret_enc, k.config
+           from wa_messages m left join customers c on c.tenant_id = m.tenant_id and c.id = m.customer_id
+           left join integration_connections k on k.tenant_id = m.tenant_id and k.kind = 'whatsapp' and k.status = 'connected' where m.id = $1`, [pl.waMessageId ?? null]));
+      const skip = async (why: string) => { await deps.db.tx(ctx, async (q) => { await q.query("update outbox set status = 'skipped', last_error = $2 where id = $1", [row.id, why]); if (m) await q.query("update wa_messages set status = 'failed', error = $2, updated_at = now() where id = $1", [m.id, why]); }); res.skipped++; };
+      if (!m) { await skip("message_not_found"); continue; }
+      if (!m.secret_enc || !m.config?.phone_number_id) { await skip("not_connected"); continue; }
+      if (m.category === "marketing" && !m.opt) { await skip("opted_out"); continue; }
+      try {
+        const token = await decryptSecret(m.secret_enc, deps.config.encryptionKey);
+        const r = await deps.whatsapp.sendTemplate({ phoneNumberId: m.config.phone_number_id, token }, { to: m.to_phone, template: m.template, lang: pl.lang ?? "pt_BR", params: pl.params ?? [] });
+        await deps.db.tx(ctx, async (q) => { await q.query("update wa_messages set status = 'sent', provider_message_id = $2, updated_at = now() where id = $1", [m.id, r.providerMessageId]); await q.query("update outbox set status = 'sent', attempts = attempts + 1 where id = $1", [row.id]); }); res.sent++;
+      } catch (e) {
+        const attempts = row.attempts + 1;
+        await deps.db.tx(ctx, async (q) => {
+          await q.query(`update outbox set attempts = $2::int, last_error = $3, status = case when $2::int >= $4::int then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]);
+          if (attempts >= MAX_ATTEMPTS) await q.query("update wa_messages set status = 'failed', error = 'provider_error', updated_at = now() where id = $1", [m.id]);
+        });
+        res.failed++;
+      }
+      continue;
+    }
     if (row.kind === "campaign") {
       // Marketing: consentimento e opt-out reverificados NO ENVIO (opt-out é imediato mesmo com a campanha já enfileirada).
       const cid = String((row.payload as { customerId?: string }).customerId ?? "");
@@ -24,7 +50,7 @@ export async function processOutbox(deps: Deps, tenantId: string, limit = 50): P
         await deps.db.tx(ctx, (q) => q.query("update outbox set status = 'sent', attempts = attempts + 1 where id = $1", [row.id])); res.sent++;
       } catch (e) {
         const attempts = row.attempts + 1;
-        await deps.db.tx(ctx, (q) => q.query(`update outbox set attempts = $2, last_error = $3, status = case when $2 >= $4 then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
+        await deps.db.tx(ctx, (q) => q.query(`update outbox set attempts = $2::int, last_error = $3, status = case when $2::int >= $4::int then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
         res.failed++;
       }
       continue;
@@ -39,7 +65,7 @@ export async function processOutbox(deps: Deps, tenantId: string, limit = 50): P
         await deps.db.tx(ctx, (q) => q.query("update outbox set status = 'sent', attempts = attempts + 1 where id = $1", [row.id])); res.sent++;
       } catch (e) {
         const attempts = row.attempts + 1;
-        await deps.db.tx(ctx, (q) => q.query(`update outbox set attempts = $2, last_error = $3, status = case when $2 >= $4 then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
+        await deps.db.tx(ctx, (q) => q.query(`update outbox set attempts = $2::int, last_error = $3, status = case when $2::int >= $4::int then 'failed' else 'pending' end, available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`, [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
         res.failed++;
       }
       continue;
@@ -62,7 +88,7 @@ export async function processOutbox(deps: Deps, tenantId: string, limit = 50): P
     } catch (e) {
       const attempts = row.attempts + 1;
       await deps.db.tx(ctx, (q) => q.query(
-        `update outbox set attempts = $2, last_error = $3, status = case when $2 >= $4 then 'failed' else 'pending' end,
+        `update outbox set attempts = $2::int, last_error = $3, status = case when $2::int >= $4::int then 'failed' else 'pending' end,
            available_at = now() + make_interval(secs => 30 * power(2, $2::int)) where id = $1`,
         [row.id, attempts, (e as Error).name, MAX_ATTEMPTS]));
       res.failed++;

@@ -1,5 +1,13 @@
 # Changelog
 
+## [Fase 8] — 2026-11-12
+### Adicionado
+- Migração 0010: conexões por tenant (segredo cifrado), `webhook_events` (event_id único, DLQ), cobranças online, mensagens WhatsApp, Web Push, faturas de assinatura; permissões `integrations:manage`, `billing:manage`.
+- WhatsApp (sandbox + adaptador Cloud API não validado), pagamentos (sandbox + núcleo de recebimento idempotente compartilhado), billing de assinaturas e job `runBilling`, Web Push (provider em memória).
+- ADR-0005/0006 com levantamento em fontes oficiais; INTEGRATIONS.md atualizado; tela mínima de Integrações.
+### Corrigido
+- Backoff do outbox (`$2` ambíguo no SQL) falhava na primeira retentativa de campanha/lead/WhatsApp.
+
 ## [Fase 7] — 2026-11-12
 ### Adicionado
 - Migração 0009: fornecedores, itens, compras, movimentos de estoque (append-only), saldo derivado por trigger, consentimento de marketing auditável, cupons, fidelidade, indicações, lembretes, campanhas, satisfação; permissões `stock:*`, `crm:*`, `campaigns:manage`.

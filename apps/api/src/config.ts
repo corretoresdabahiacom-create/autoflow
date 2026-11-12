@@ -21,6 +21,11 @@ export interface Config {
   portalBaseUrl: string;
   publicBaseUrl: string;
   turnstileSiteKey: string | null;
+  metaAppSecret: string | null;
+  waVerifyToken: string | null;
+  metaGraphVersion: string;
+  sandboxWebhookSecret: string | null;
+  vapidPublicKey: string | null;
   logLevel: "silent" | "info";
 }
 
@@ -78,6 +83,11 @@ export function loadConfig(env: Env = process.env): Config {
     portalBaseUrl: env.PORTAL_BASE_URL ?? origins[0] ?? "http://localhost:5173",
     publicBaseUrl: (env.PUBLIC_BASE_URL ?? "http://localhost:8787").replace(/\/$/, ""),
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? null,
+    metaAppSecret: env.META_APP_SECRET ?? null,
+    waVerifyToken: env.WA_VERIFY_TOKEN ?? null,
+    metaGraphVersion: env.META_GRAPH_VERSION ?? "v21.0",
+    sandboxWebhookSecret: prod ? (env.SANDBOX_WEBHOOK_SECRET ?? null) : (env.SANDBOX_WEBHOOK_SECRET ?? "sandbox-secret"),
+    vapidPublicKey: env.VAPID_PUBLIC_KEY ?? null,
     logLevel: mode === "test" ? "silent" : "info",
   };
 }

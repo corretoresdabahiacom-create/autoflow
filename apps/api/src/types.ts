@@ -4,6 +4,7 @@ import type { CaptchaVerifier } from "./captcha";
 import type { Db } from "./db";
 import type { EmailProvider } from "./email";
 import type { OtpChannel } from "./otp";
+import type { PaymentProvider, PushProvider, WhatsAppProvider } from "./providers";
 import type { StorageProvider } from "./storage";
 
 export interface Deps {
@@ -13,6 +14,9 @@ export interface Deps {
   storage: StorageProvider;
   otp: OtpChannel;
   captcha: CaptchaVerifier;
+  whatsapp: WhatsAppProvider;
+  payments: PaymentProvider;
+  push: PushProvider;
 }
 
 export interface SessionRow {

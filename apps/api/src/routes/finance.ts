@@ -42,7 +42,7 @@ async function settings(q: Q, tenantId: string) {
 }
 
 export interface Entry { account: string; side: "D" | "C"; amount: number; costCenterId?: string | null }
-export interface Txn { tenantId: string; unitId: string; kind: string; competence?: string; cash?: string | null; description: string; osId?: string | null; userId: string; entries: Entry[] }
+export interface Txn { tenantId: string; unitId: string; kind: string; competence?: string; cash?: string | null; description: string; osId?: string | null; userId: string | null; entries: Entry[] }
 export async function postTxn(q: Q, t: Txn): Promise<string> {
   const x = await q.one<{ id: string }>(
     `insert into ledger_txns (tenant_id, unit_id, kind, competence_date, cash_date, description, os_id, created_by)
@@ -87,6 +87,47 @@ async function createInstallments(q: Q, tenantId: string, docId: string, net: nu
   const parts = splitCents(net, plan.count);
   for (const [i, amt] of parts.entries())
     await q.query("insert into fin_installments (tenant_id, doc_id, no, due_date, amount_cents) values ($1,$2,$3,$4::date + $5::int, $6)", [tenantId, docId, i + 1, plan.firstDueDate, i * plan.intervalDays, amt]);
+}
+
+export interface SettleInput { walletId: string; settledOn?: string; method: "cash" | "pix" | "card" | "transfer" | "boleto" | "other"; allocations: { installmentId: string; principalCents: number }[]; waiveCharges: boolean }
+/** Núcleo idempotente de recebimento/pagamento (usado pelo endpoint e pelo processamento de webhooks de pagamento). */
+export async function settleCore(q: Q, p: { tenantId: string; userId: string | null; requestId: string }, kind: "receipt" | "payment", b: SettleInput, key: string, reqHash: string) {
+      await q.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`${p.tenantId}:${kind}:${key}`]);
+      const prior = await q.one<{ id: string; request_hash: string; principal_cents: string; charges_cents: string }>("select id, request_hash, principal_cents, charges_cents from fin_settlements where kind = $1 and idempotency_key = $2", [kind, key]);
+      if (prior) { if (prior.request_hash !== reqHash) throw conflict("idempotency_key_reuse"); return { replayed: true, id: prior.id, principalCents: N(prior.principal_cents), chargesCents: N(prior.charges_cents) }; }
+      await ensureChart(q, p.tenantId);
+      const wallet = await q.one<{ id: string; account_id: string }>("select id, account_id from fin_wallets where id = $1 and active", [b.walletId]);
+      if (!wallet) throw notFound("wallet_not_found");
+      const ids = b.allocations.map((a) => a.installmentId);
+      const docs = await q.many<{ id: string }>("select d.id from fin_documents d where d.id in (select doc_id from fin_installments where id = any($1::uuid[])) order by d.id for update", [ids]);
+      void docs;
+      const today = await todayOf(q); const on = b.settledOn ?? today;
+      if (on > today) throw new HttpError(422, "future_date");
+      const rows = await q.many<any>(`${InstSelect} where i.id = any($1::uuid[])`, [ids]);
+      if (rows.length !== ids.length) throw notFound("installment_not_found");
+      const st = await settings(q, p.tenantId);
+      let principal = 0, charges = 0; const lines: any[] = [];
+      for (const a of b.allocations) {
+        const row = rows.find((x) => x.id === a.installmentId);
+        if (row.kind !== (kind === "receipt" ? "receivable" : "payable")) throw new HttpError(422, "wrong_document_kind");
+        if (row.cancelled) throw conflict("document_cancelled");
+        if (a.principalCents > N(row.amount_cents) - N(row.paid_cents)) throw conflict("exceeds_open_amount");
+        const ch = kind === "receipt" && !b.waiveCharges ? lateCharges({ principalCents: a.principalCents, dueDate: row.due_date, on, fineBp: st.late_fine_bp, interestBpMonth: st.late_interest_bp_month }) : { fineCents: 0, interestCents: 0 };
+        principal += a.principalCents; charges += ch.fineCents + ch.interestCents;
+        lines.push({ ...a, unit: row.unit_id, interest: ch.interestCents, fine: ch.fineCents });
+      }
+      const unit = lines[0].unit as string;
+      if (lines.some((l) => l.unit !== unit)) throw new HttpError(422, "mixed_units");
+      const entries: Entry[] = kind === "receipt"
+        ? [{ account: wallet.account_id, side: "D", amount: principal + charges }, { account: await sysAcc(q, "receivable"), side: "C", amount: principal }, { account: await sysAcc(q, "interest_income"), side: "C", amount: charges }]
+        : [{ account: await sysAcc(q, "payable"), side: "D", amount: principal }, { account: wallet.account_id, side: "C", amount: principal }];
+      const txnId = await postTxn(q, { tenantId: p.tenantId, unitId: unit, kind, competence: on, cash: on, description: kind === "receipt" ? "Recebimento" : "Pagamento", userId: p.userId, entries });
+      const s = await q.one<{ id: string }>(
+        `insert into fin_settlements (tenant_id, unit_id, kind, wallet_id, principal_cents, charges_cents, settled_on, method, idempotency_key, request_hash, txn_id, created_by)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning id`, [p.tenantId, unit, kind, b.walletId, principal, charges, on, b.method, key, reqHash, txnId, p.userId]);
+      for (const l of lines) await q.query("insert into fin_allocations (tenant_id, settlement_id, installment_id, principal_cents, interest_cents, fine_cents) values ($1,$2,$3,$4,$5,$6)", [p.tenantId, s!.id, l.installmentId, l.principalCents, l.interest, l.fine]);
+      await audit(q, { tenantId: p.tenantId, actorType: p.userId ? "user" : "system", actorId: p.userId, action: `finance.${kind}`, entityType: "settlement", entityId: s!.id, requestId: p.requestId, metadata: { principalCents: principal, chargesCents: charges, waived: b.waiveCharges } });
+      return { replayed: false, id: s!.id, principalCents: principal, chargesCents: charges };
 }
 
 export function registerFinanceRoutes(r: Router, deps: Deps): void {
@@ -275,44 +316,7 @@ export function registerFinanceRoutes(r: Router, deps: Deps): void {
     if (new Set(b.allocations.map((a) => a.installmentId)).size !== b.allocations.length) throw new HttpError(422, "duplicate_installment");
     if (b.waiveCharges && !p.permissions.has("finance:discount")) throw forbidden("discount_not_allowed");
     const reqHash = await sha256Hex(JSON.stringify([b.walletId, b.settledOn ?? null, b.method, [...b.allocations].sort((x, y) => x.installmentId.localeCompare(y.installmentId)), b.waiveCharges]));
-    const res = await tx(p, async (q) => {
-      await q.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`${p.tenantId}:${kind}:${key}`]);
-      const prior = await q.one<{ id: string; request_hash: string; principal_cents: string; charges_cents: string }>("select id, request_hash, principal_cents, charges_cents from fin_settlements where kind = $1 and idempotency_key = $2", [kind, key]);
-      if (prior) { if (prior.request_hash !== reqHash) throw conflict("idempotency_key_reuse"); return { replayed: true, id: prior.id, principalCents: N(prior.principal_cents), chargesCents: N(prior.charges_cents) }; }
-      await ensureChart(q, p.tenantId);
-      const wallet = await q.one<{ id: string; account_id: string }>("select id, account_id from fin_wallets where id = $1 and active", [b.walletId]);
-      if (!wallet) throw notFound("wallet_not_found");
-      const ids = b.allocations.map((a) => a.installmentId);
-      const docs = await q.many<{ id: string }>("select d.id from fin_documents d where d.id in (select doc_id from fin_installments where id = any($1::uuid[])) order by d.id for update", [ids]);
-      void docs;
-      const today = await todayOf(q); const on = b.settledOn ?? today;
-      if (on > today) throw new HttpError(422, "future_date");
-      const rows = await q.many<any>(`${InstSelect} where i.id = any($1::uuid[])`, [ids]);
-      if (rows.length !== ids.length) throw notFound("installment_not_found");
-      const st = await settings(q, p.tenantId);
-      let principal = 0, charges = 0; const lines: any[] = [];
-      for (const a of b.allocations) {
-        const row = rows.find((x) => x.id === a.installmentId);
-        if (row.kind !== (kind === "receipt" ? "receivable" : "payable")) throw new HttpError(422, "wrong_document_kind");
-        if (row.cancelled) throw conflict("document_cancelled");
-        if (a.principalCents > N(row.amount_cents) - N(row.paid_cents)) throw conflict("exceeds_open_amount");
-        const ch = kind === "receipt" && !b.waiveCharges ? lateCharges({ principalCents: a.principalCents, dueDate: row.due_date, on, fineBp: st.late_fine_bp, interestBpMonth: st.late_interest_bp_month }) : { fineCents: 0, interestCents: 0 };
-        principal += a.principalCents; charges += ch.fineCents + ch.interestCents;
-        lines.push({ ...a, unit: row.unit_id, interest: ch.interestCents, fine: ch.fineCents });
-      }
-      const unit = lines[0].unit as string;
-      if (lines.some((l) => l.unit !== unit)) throw new HttpError(422, "mixed_units");
-      const entries: Entry[] = kind === "receipt"
-        ? [{ account: wallet.account_id, side: "D", amount: principal + charges }, { account: await sysAcc(q, "receivable"), side: "C", amount: principal }, { account: await sysAcc(q, "interest_income"), side: "C", amount: charges }]
-        : [{ account: await sysAcc(q, "payable"), side: "D", amount: principal }, { account: wallet.account_id, side: "C", amount: principal }];
-      const txnId = await postTxn(q, { tenantId: p.tenantId, unitId: unit, kind, competence: on, cash: on, description: kind === "receipt" ? "Recebimento" : "Pagamento", userId: p.userId, entries });
-      const s = await q.one<{ id: string }>(
-        `insert into fin_settlements (tenant_id, unit_id, kind, wallet_id, principal_cents, charges_cents, settled_on, method, idempotency_key, request_hash, txn_id, created_by)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning id`, [p.tenantId, unit, kind, b.walletId, principal, charges, on, b.method, key, reqHash, txnId, p.userId]);
-      for (const l of lines) await q.query("insert into fin_allocations (tenant_id, settlement_id, installment_id, principal_cents, interest_cents, fine_cents) values ($1,$2,$3,$4,$5,$6)", [p.tenantId, s!.id, l.installmentId, l.principalCents, l.interest, l.fine]);
-      await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: `finance.${kind}`, entityType: "settlement", entityId: s!.id, requestId: c.get("requestId"), metadata: { principalCents: principal, chargesCents: charges, waived: b.waiveCharges } });
-      return { replayed: false, id: s!.id, principalCents: principal, chargesCents: charges };
-    });
+    const res = await tx(p, (q) => settleCore(q, { tenantId: p.tenantId, userId: p.userId, requestId: c.get("requestId") }, kind, b, key, reqHash));
     return c.json(res, res.replayed ? 200 : 201);
   };
   r.post("/finance/receipts", RECEIVE, settle("receipt"));

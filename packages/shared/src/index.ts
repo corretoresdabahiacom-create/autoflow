@@ -6,3 +6,4 @@ export * from "./portal";
 export * from "./finance";
 export * from "./site";
 export * from "./stock";
+export * from "./billing";
