@@ -15,6 +15,7 @@ import { registerProductionRoutes } from "./routes/production";
 import { registerFinanceRoutes } from "./routes/finance";
 import { registerSitePublicRoutes } from "./routes/site-public";
 import { registerSiteAdminRoutes } from "./routes/site-admin";
+import { registerAdvancedRoutes } from "./routes/advanced";
 import { registerBillingRoutes } from "./routes/billing";
 import { registerIntegrationRoutes } from "./routes/integrations";
 import { registerCrmRoutes } from "./routes/crm";
@@ -63,6 +64,7 @@ export function createApp(deps: Deps) {
   registerCrmRoutes(router, deps);
   registerIntegrationRoutes(router, deps);
   registerBillingRoutes(router, deps);
+  registerAdvancedRoutes(router, deps);
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {

@@ -26,3 +26,9 @@ Quantidades em milésimos, valores em centavos. Todo movimento é append-only; `
 
 ## D-007 — Consentimento de marketing
 `customers.marketing_opt_in` é o estado; cada mudança é registrada por trigger em `marketing_consent_log` (append-only). Campanhas só enfileiram clientes com opt-in e e-mail; o consentimento é reverificado no ENVIO, e o opt-out cancela pendências imediatamente. Opt-out público por link assinado (HMAC).
+
+## D-008 — Comissão: regra versionada e histórico preservado
+`commission_rules` é append-only: mudar percentual cria nova versão com `valid_from`. O cálculo usa a regra vigente na data de entrega da OS. Recalcular uma OS já calculada mantém a regra do lançamento original e lança apenas a **diferença** como `adjustment` (positivo ou negativo) — nada é editado ou apagado. Acúmulo no ledger: D Comissões (despesa) / C Comissões a pagar; pagamento abate adiantamentos em aberto (D Comissões a pagar / C Adiantamentos + C carteira). Percentuais e bases são configuração do tenant, não regra fixa.
+
+## D-009 — Automações: idempotência, limite e kill-switch
+Uma execução por (regra, evento) garantida por chave única; execuções são serializadas por tenant (advisory lock), então limite mensal e idempotência são exatos sob concorrência. Bloqueios (kill-switch da plataforma, interruptor da oficina, limite, plano sem o recurso) **não consomem** o evento: ao liberar, ele é processado uma vez. Regras novas/reativadas só olham eventos posteriores à ativação. Automação envia apenas mensagem de **utilidade**; marketing continua exclusivo de campanhas com consentimento. Todo disparo e todo bloqueio são auditados.

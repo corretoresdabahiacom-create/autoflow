@@ -1,5 +1,13 @@
 # Changelog
 
+## [Fase 9] — 2026-11-18
+### Adicionado
+- Migração 0011: seguradoras/sinistros/autorizações (histórico imutável), transferências de estoque entre unidades, regras/lançamentos/adiantamentos/pagamentos de comissão (append-only), lista de espera da agenda, automações (regras, execuções idempotentes, interruptor da oficina); permissões `insurers:*`, `reports:advanced`, `automation:manage`, `commissions:*`; limite `automation.monthly`.
+- Relatórios avançados (consolidado por escopo, resultado por categoria/unidade, lucro por OS, produtividade, valorização do estoque) com blocos de conciliação com ledger/estoque.
+- Kill-switch global de automações (Super Admin, com motivo e auditoria); entitlements Premium aplicados no roteador.
+- Contas do plano: Transferências entre unidades, Adiantamentos a colaboradores, Comissões a pagar, Comissões (despesa).
+- Tela mínima "Avançado".
+
 ## [Fase 8] — 2026-11-12
 ### Adicionado
 - Migração 0010: conexões por tenant (segredo cifrado), `webhook_events` (event_id único, DLQ), cobranças online, mensagens WhatsApp, Web Push, faturas de assinatura; permissões `integrations:manage`, `billing:manage`.

@@ -38,18 +38,18 @@ export function registerStockRoutes(r: Router, deps: Deps): void {
     N((await q.one<{ s: string }>("select coalesce(sum(reserved_delta),0)::bigint s from stock_movements where unit_id = $1 and item_id = $2 and os_id = $3", [unitId, itemId, osId]))!.s);
 
   /** Núcleo: grava o movimento (append-only); o trigger atualiza o saldo; lança no ledger quando há valor. */
-  type Kind = "purchase" | "consume" | "return" | "adjust_in" | "adjust_out" | "reserve" | "release";
-  async function move(q: Q, p: TenantPrincipal, a: { kind: Kind; qtyMilli: number; unitId: string; item: { id: string; category: string }; costCents?: number; reservedDelta?: number; osId?: string; purchaseId?: string; refMovementId?: number; reason?: string; txnId?: string | null; description?: string }): Promise<number> {
+  type Kind = "purchase" | "consume" | "return" | "adjust_in" | "adjust_out" | "reserve" | "release" | "transfer_out" | "transfer_in";
+  async function move(q: Q, p: TenantPrincipal, a: { kind: Kind; qtyMilli: number; unitId: string; item: { id: string; category: string }; costCents?: number; reservedDelta?: number; osId?: string; purchaseId?: string; refMovementId?: number; transferId?: string; reason?: string; txnId?: string | null; description?: string }): Promise<number> {
     const cost = a.costCents ?? 0;
-    const inflow = a.kind === "purchase" || a.kind === "adjust_in" || a.kind === "return"; const outflow = a.kind === "consume" || a.kind === "adjust_out";
+    const inflow = a.kind === "purchase" || a.kind === "adjust_in" || a.kind === "return" || a.kind === "transfer_in"; const outflow = a.kind === "consume" || a.kind === "adjust_out" || a.kind === "transfer_out";
     const on = inflow ? a.qtyMilli : outflow ? -a.qtyMilli : 0;
     const res = a.kind === "reserve" ? a.qtyMilli : a.kind === "release" ? -a.qtyMilli : (a.reservedDelta ?? 0);
     const val = inflow ? cost : outflow ? -cost : 0;
     try {
       const x = await q.one<{ id: string }>(
-        `insert into stock_movements (tenant_id, unit_id, item_id, kind, qty_milli, on_hand_delta, reserved_delta, value_delta_cents, os_id, purchase_id, ref_movement_id, reason, txn_id, created_by)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) returning id`,
-        [p.tenantId, a.unitId, a.item.id, a.kind, a.qtyMilli, on, res, val, a.osId ?? null, a.purchaseId ?? null, a.refMovementId ?? null, a.reason ?? null, a.txnId ?? null, p.userId]);
+        `insert into stock_movements (tenant_id, unit_id, item_id, kind, qty_milli, on_hand_delta, reserved_delta, value_delta_cents, os_id, purchase_id, ref_movement_id, reason, txn_id, created_by, transfer_id)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning id`,
+        [p.tenantId, a.unitId, a.item.id, a.kind, a.qtyMilli, on, res, val, a.osId ?? null, a.purchaseId ?? null, a.refMovementId ?? null, a.reason ?? null, a.txnId ?? null, p.userId, a.transferId ?? null]);
       return Number(x!.id);
     } catch (e) { if ((e as { code?: string }).code === "23514") throw conflict("insufficient_stock"); throw e; }
   }
@@ -179,6 +179,47 @@ export function registerStockRoutes(r: Router, deps: Deps): void {
 
   // ---- Fornecedores ----
   const Supplier = z.object({ name: z.string().trim().min(2).max(120), doc: z.string().trim().max(20).optional(), phone: z.string().trim().max(30).optional(), email: z.string().trim().email().max(120).optional() });
+
+  // ---- Transferência entre unidades: sai pelo custo médio da origem e entra pelo MESMO custo no destino; ledger por unidade via conta de transferência ----
+  r.post("/stock/transfers", MANAGE, async (c) => {
+    const p = c.get("tenant");
+    const b = await parseJson(c, z.object({ fromUnitId: uuid, toUnitId: uuid, idempotencyKey: z.string().min(8).max(80), note: z.string().trim().max(200).optional(), items: z.array(z.object({ itemId: uuid, qty })).min(1).max(100) }));
+    if (b.fromUnitId === b.toUnitId) throw new HttpError(422, "same_unit");
+    const ids = b.items.map((i) => i.itemId); if (new Set(ids).size !== ids.length) throw new HttpError(422, "duplicate_item");
+    const out = await tx(p, async (q) => {
+      const prev = await q.one<{ id: string }>("select id from stock_transfers where idempotency_key = $1", [b.idempotencyKey]);
+      if (prev) return { id: prev.id, replayed: true, totalCents: 0 };
+      // RLS: o usuário precisa enxergar (ter escopo em) AMBAS as unidades.
+      const from = await unitOf(q, b.fromUnitId); const to = await unitOf(q, b.toUnitId);
+      const tr = await q.one<{ id: string }>("insert into stock_transfers (tenant_id, from_unit_id, to_unit_id, note, idempotency_key, created_by) values ($1,$2,$3,$4,$5,$6) on conflict (tenant_id, idempotency_key) do nothing returning id", [p.tenantId, from, to, b.note ?? null, b.idempotencyKey, p.userId]);
+      if (!tr) return { id: (await q.one<{ id: string }>("select id from stock_transfers where idempotency_key = $1", [b.idempotencyKey]))!.id, replayed: true, totalCents: 0 };
+      const lines: { item: { id: string; category: string }; qm: number; cost: number }[] = [];
+      for (const it of [...b.items].sort((x, y) => x.itemId.localeCompare(y.itemId))) {
+        const item = await itemOf(q, it.itemId); if (!item.active) throw new HttpError(422, "item_inactive"); const qm = parseQtyMilli(it.qty);
+        for (const u of [from, to].sort()) await lockLevel(q, p, u, item.id); // ordem global de locks (sem deadlock entre A→B e B→A)
+        const l = await lockLevel(q, p, from, item.id);
+        if (qm > l.onHand - l.reserved) throw conflict("insufficient_stock");
+        let cost: number; try { cost = outCost({ onHandMilli: l.onHand, valueCents: l.value }, qm); } catch { throw conflict("insufficient_stock"); }
+        lines.push({ item, qm, cost });
+      }
+      const total = lines.reduce((s, l) => s + l.cost, 0);
+      let txOut: string | null = null; let txIn: string | null = null;
+      if (total > 0) {
+        await ensureChart(q, p.tenantId); const inv = await sysAcc(q, "inventory"); const clr = await sysAcc(q, "inter_unit");
+        txOut = await postTxn(q, { tenantId: p.tenantId, unitId: from, kind: "stock", description: `Transferência ${tr.id.slice(0, 8)} (saída)`, userId: p.userId, entries: [{ account: clr, side: "D", amount: total }, { account: inv, side: "C", amount: total }] });
+        txIn = await postTxn(q, { tenantId: p.tenantId, unitId: to, kind: "stock", description: `Transferência ${tr.id.slice(0, 8)} (entrada)`, userId: p.userId, entries: [{ account: inv, side: "D", amount: total }, { account: clr, side: "C", amount: total }] });
+      }
+      for (const l of lines) {
+        await move(q, p, { kind: "transfer_out", qtyMilli: l.qm, unitId: from, item: l.item, costCents: l.cost, transferId: tr.id, txnId: txOut });
+        await move(q, p, { kind: "transfer_in", qtyMilli: l.qm, unitId: to, item: l.item, costCents: l.cost, transferId: tr.id, txnId: txIn });
+      }
+      await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "stock.transfer", entityType: "stock_transfer", entityId: tr.id, requestId: c.get("requestId"), metadata: { from, to, items: lines.length, totalCents: total } });
+      return { id: tr.id, totalCents: total, replayed: false };
+    });
+    return c.json(out, out.replayed ? 200 : 201);
+  });
+  r.get("/stock/transfers", READ, async (c) => c.json({ transfers: await tx(c.get("tenant"), (q) => q.many("select id, from_unit_id, to_unit_id, note, created_at from stock_transfers order by created_at desc limit 100")) }));
+
   r.post("/stock/suppliers", MANAGE, async (c) => {
     const p = c.get("tenant"); const b = await parseJson(c, Supplier);
     try { return c.json(await tx(p, (q) => q.one("insert into suppliers (tenant_id, name, doc, phone, email) values ($1,$2,$3,$4,$5) returning id", [p.tenantId, b.name, b.doc ?? null, b.phone ?? null, b.email ?? null])), 201); }

@@ -251,3 +251,51 @@ describe("billing: regras puras", () => {
     expect(backoffSeconds(1)).toBe(30); expect(backoffSeconds(20)).toBe(3600);
   });
 });
+
+import { authorizationDue, automationGate, claimCanMove, claimDeadline, commissionAdjustment, commissionAmount, decideAuthorization, findFreeSlot, insurerShare, payoutSplit, pickRule, renderParam, waitlistFits } from "./index";
+describe("Fase 9 — regras puras", () => {
+  it("sinistro: transições, prazo e decisão coerente com os valores", () => {
+    expect(claimCanMove("opened", "awaiting_authorization")).toBe(true);
+    expect(claimCanMove("opened", "paid")).toBe(false);
+    expect(claimCanMove("paid", "cancelled")).toBe(false);
+    expect(claimCanMove("denied", "awaiting_authorization")).toBe(true);
+    const due = authorizationDue(0, 48);
+    expect(claimDeadline("awaiting_authorization", due, 47 * 3600_000)).toBe("due_soon");
+    expect(claimDeadline("awaiting_authorization", due, 49 * 3600_000)).toBe("overdue");
+    expect(claimDeadline("authorized", due, 49 * 3600_000)).toBe("none");
+    expect(decideAuthorization(1000, 1000)).toBe("authorized");
+    expect(decideAuthorization(1000, 400)).toBe("partial");
+    expect(decideAuthorization(1000, 0)).toBe("denied");
+    expect(() => decideAuthorization(1000, 1001)).toThrow();
+    expect(insurerShare(10000, 3000)).toEqual({ insurerCents: 7000, customerCents: 3000 });
+    expect(insurerShare(2000, 3000)).toEqual({ insurerCents: 0, customerCents: 2000 });
+  });
+  it("comissão: regra vigente por data, arredondamento, ajuste e abatimento de adiantamento", () => {
+    const rules = [{ validFromMs: 100, versionNo: 1, r: 500 }, { validFromMs: 200, versionNo: 2, r: 700 }];
+    expect(pickRule(rules, 99)).toBeNull();
+    expect(pickRule(rules, 150)?.r).toBe(500);
+    expect(pickRule(rules, 250)?.r).toBe(700);
+    expect(commissionAmount(10001, 500)).toBe(500); // 500,05 -> 500
+    expect(commissionAmount(10010, 500)).toBe(501); // 500,5 -> 501
+    expect(commissionAmount(-5, 500)).toBe(0);
+    expect(() => commissionAmount(100, 10001)).toThrow();
+    expect(commissionAdjustment(500, 350)).toBe(-150);
+    expect(payoutSplit(10000, 3000)).toEqual({ offsetCents: 3000, netCents: 7000 });
+    expect(payoutSplit(2000, 3000)).toEqual({ offsetCents: 2000, netCents: 0 });
+  });
+  it("agenda: horário livre e encaixe da lista de espera", () => {
+    const H = 3600_000;
+    expect(findFreeSlot([{ startMs: 0, endMs: 2 * H }], { startMs: 0, endMs: 5 * H }, 60)).toBe(2 * H);
+    expect(findFreeSlot([{ startMs: 0, endMs: 5 * H }], { startMs: 0, endMs: 5 * H }, 60)).toBeNull();
+    expect(waitlistFits({ windowFromMs: 0, windowToMs: 4 * H, durationMin: 60 }, { startMs: H, endMs: 3 * H })).toBe(true);
+    expect(waitlistFits({ windowFromMs: 0, windowToMs: 4 * H, durationMin: 180 }, { startMs: H, endMs: 3 * H })).toBe(false);
+  });
+  it("automação: variáveis permitidas e portões (kill-switch, tenant, limite)", () => {
+    expect(renderParam("Olá {{customer_first_name}}, OS {{os_number}}", { customer_first_name: "Ana", os_number: "7" })).toBe("Olá Ana, OS 7");
+    expect(() => renderParam("{{password}}", {})).toThrow();
+    expect(automationGate({ platformKill: true, tenantEnabled: true, usedThisMonth: 0, limit: 10 })).toEqual({ ok: false, reason: "platform_kill_switch" });
+    expect(automationGate({ platformKill: false, tenantEnabled: false, usedThisMonth: 0, limit: 10 })).toEqual({ ok: false, reason: "tenant_disabled" });
+    expect(automationGate({ platformKill: false, tenantEnabled: true, usedThisMonth: 10, limit: 10 })).toEqual({ ok: false, reason: "limit_reached" });
+    expect(automationGate({ platformKill: false, tenantEnabled: true, usedThisMonth: 999, limit: null }).ok).toBe(true);
+  });
+});

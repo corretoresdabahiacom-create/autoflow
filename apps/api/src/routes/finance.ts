@@ -25,6 +25,8 @@ const SYSTEM_ACCOUNTS: [string, string, string, string][] = [
   ["cost_third_party", "5.1.03", "Serviços terceirizados", "direct_cost"], ["inventory", "1.1.03", "Estoque", "asset"], ["grni", "2.1.02", "Compras a faturar (estoque)", "liability"], ["cost_other_direct", "5.1.09", "Outros custos diretos", "direct_cost"],
   ["exp_rent", "6.1.01", "Aluguel", "expense"], ["exp_utilities", "6.1.02", "Energia, água e internet", "expense"],
   ["exp_payroll", "6.1.03", "Folha e encargos", "expense"], ["exp_taxes", "6.1.04", "Impostos e taxas", "expense"], ["exp_other", "6.1.09", "Outras despesas", "expense"],
+  ["inter_unit", "1.1.04", "Transferências entre unidades", "asset"], ["employee_advances", "1.1.05", "Adiantamentos a colaboradores", "asset"],
+  ["commissions_payable", "2.1.03", "Comissões a pagar", "liability"], ["exp_commissions", "6.1.05", "Comissões", "expense"],
 ];
 
 export async function ensureChart(q: Q, tenantId: string) {
