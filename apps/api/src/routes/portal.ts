@@ -63,7 +63,7 @@ async function authenticatePortal(c: Context<AppEnv>, deps: Deps): Promise<Porta
     if (!s || !s.ok) return null;
     const t = await q.one<{ status: string }>("select status from tenants where id = $1", [tenantId]);
     const sub = await q.one<{ status: SubscriptionStatus; plan_id: string }>("select status, plan_id from subscriptions where tenant_id = $1", [tenantId]);
-    if (!t || t.status !== "active" || !sub || !subscriptionAllowsUse(sub.status)) return "blocked" as const;
+    if (!t || (t.status !== "active" && t.status !== "trial") || !sub || !subscriptionAllowsUse(sub.status)) return "blocked" as const;
     const pf = Object.fromEntries((await q.many<{ feature_code: string; value: FeatureValue }>("select feature_code, value from plan_features where plan_id = $1", [sub.plan_id])).map((r) => [r.feature_code, r.value]));
     const of = Object.fromEntries((await q.many<{ feature_code: string; value: FeatureValue }>("select feature_code, value from tenant_feature_overrides where tenant_id = $1", [tenantId])).map((r) => [r.feature_code, r.value]));
     if (!hasFeature(resolveEntitlements(pf, of, sub.status), "portal")) return "blocked" as const;

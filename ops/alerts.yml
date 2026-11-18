@@ -1,0 +1,45 @@
+# Regras de alerta Prometheus (FORMATO PRONTO; NÃO ATIVAS — não há Prometheus/Alertmanager provisionado. Ver KI-089).
+# Métricas expostas por GET /metrics (Bearer METRICS_TOKEN). Limiares iniciais, a calibrar com tráfego real.
+groups:
+  - name: autoflow
+    rules:
+      - alert: ApiDown
+        expr: up{job="autoflow-api"} == 0 or autoflow_db_up == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "API ou banco indisponível", runbook: "docs/OPERATIONS.md#api-fora" }
+      - alert: High5xxRate
+        expr: sum(rate(autoflow_http_requests_total{status=~"5.."}[5m])) / sum(rate(autoflow_http_requests_total[5m])) > 0.02
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: ">2% de respostas 5xx em 5 min", runbook: "docs/OPERATIONS.md#erros-5xx" }
+      - alert: SlowP95
+        expr: histogram_quantile(0.95, sum by (le, route) (rate(autoflow_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "p95 > 1s em {{ $labels.route }}", runbook: "docs/PERFORMANCE.md" }
+      - alert: DbPoolSaturated
+        expr: autoflow_db_pool_waiting > 5
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Fila de conexões no pool do banco" }
+      - alert: OutboxStuck
+        expr: autoflow_outbox_oldest_pending_seconds > 900 or autoflow_outbox_failed > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Outbox parado/com falhas (e-mail, WhatsApp, webhooks)", runbook: "docs/OPERATIONS.md#outbox" }
+      - alert: WebhookDead
+        expr: autoflow_webhook_dead > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations: { summary: "Webhooks em dead-letter" }
+      - alert: BillingPastDue
+        expr: autoflow_subscriptions_past_due > 0
+        for: 1h
+        labels: { severity: info }
+        annotations: { summary: "Assinaturas em atraso (acompanhar cobrança)" }
+      - alert: BackupStale
+        expr: time() - autoflow_last_backup_timestamp_seconds > 90000
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "Sem backup válido há >25h (RPO meta 24h). Métrica deve ser publicada pelo job de backup (não existe ainda)." }

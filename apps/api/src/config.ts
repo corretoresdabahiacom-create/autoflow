@@ -26,6 +26,8 @@ export interface Config {
   metaGraphVersion: string;
   sandboxWebhookSecret: string | null;
   vapidPublicKey: string | null;
+  /** Token do /metrics (Bearer). Sem token configurado, o endpoint não existe (404). */
+  metricsToken: string | null;
   logLevel: "silent" | "info";
 }
 
@@ -88,6 +90,7 @@ export function loadConfig(env: Env = process.env): Config {
     metaGraphVersion: env.META_GRAPH_VERSION ?? "v21.0",
     sandboxWebhookSecret: prod ? (env.SANDBOX_WEBHOOK_SECRET ?? null) : (env.SANDBOX_WEBHOOK_SECRET ?? "sandbox-secret"),
     vapidPublicKey: env.VAPID_PUBLIC_KEY ?? null,
+    metricsToken: env.METRICS_TOKEN && env.METRICS_TOKEN.length >= 24 ? env.METRICS_TOKEN : null,
     logLevel: mode === "test" ? "silent" : "info",
   };
 }

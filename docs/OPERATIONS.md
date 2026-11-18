@@ -27,3 +27,28 @@ Expiração de links/sessões · fim de acesso excepcional · metering · dump d
 
 ## 7. Custos
 Painel interno de custo por tenant (armazenamento, mensagens, transformações) para precificação dos planos.
+
+## Fase 10 — Operação (runbook)
+> Procedimentos escritos e, quando indicado, ensaiados localmente. Nenhum foi exercitado em produção (não existe).
+
+### Endpoints operacionais
+- `GET /health` (vivo) · `GET /ready` (200 com banco acessível; 503 se não) · `GET /metrics` (Bearer `METRICS_TOKEN`; sem token configurado responde 404).
+- Log de acesso estruturado (JSON, sem PII: rota por padrão, status, duração, requestId). Cabeçalhos de segurança em todas as respostas.
+
+### API fora
+1. `/ready`: se `db:"down"`, checar Postgres/conexões (`autoflow_db_pool_*`). 2. Se `/health` falha, reiniciar o processo e ver logs por `requestId`. 3. Se persistir após deploy, seguir `ROLLBACK.md`.
+
+### Erros 5xx
+Filtrar o log de acesso por `status>=500`, agrupar por `route`; correlacionar com o último deploy; rollback se começou após ele.
+
+### Outbox
+`autoflow_outbox_pending/failed/oldest_pending_seconds`. Parado = o processador não está agendado (KI-024) ou o provedor externo falhou. Reprocessar com o job; falhas permanentes ficam visíveis para o Super Admin (policy `outbox_ops_read`).
+
+### Direitos do titular (LGPD)
+Atendimento pelo dono da oficina com permissão `lgpd:manage`: `GET /customers/:id/export` e `POST /customers/:id/anonymize` (exige motivo; evidência append-only em `lgpd_requests`). Registros fiscais/financeiros com obrigação de retenção são **mantidos** (ver LEGAL_RETENTION.md); só dados pessoais de contato/cadastro são anonimizados. Prazo legal de resposta: acompanhar manualmente.
+
+### Backup e restauração
+`ops/restore-drill.sh` (ver RPO_RTO.md). Backup automatizado: **não implantado**.
+
+### Alertas
+`ops/alerts.yml` (não ativo). Painéis: **não criados** (KI-089).

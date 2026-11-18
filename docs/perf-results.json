@@ -1,0 +1,66 @@
+{
+  "when": "2026-11-18T17:29:58.157Z",
+  "note": "processo único, Postgres local, sem rede/TLS; máquina de dev",
+  "targetsMs": {
+    "read": 300,
+    "write": 600
+  },
+  "res": {
+    "GET /customers": {
+      "n": 400,
+      "errors": 0,
+      "p50": 41.8,
+      "p95": 68.9,
+      "p99": 78.1,
+      "max": 79.7
+    },
+    "GET /orders": {
+      "n": 400,
+      "errors": 0,
+      "p50": 45.3,
+      "p95": 64.2,
+      "p99": 72.5,
+      "max": 74.5
+    },
+    "GET /finance/receivables": {
+      "n": 300,
+      "errors": 0,
+      "p50": 47.1,
+      "p95": 62.2,
+      "p99": 68.5,
+      "max": 69.5
+    },
+    "GET /finance/dre": {
+      "n": 200,
+      "errors": 0,
+      "p50": 24.1,
+      "p95": 38.4,
+      "p99": 40.6,
+      "max": 41.9
+    },
+    "GET /reports/consolidated": {
+      "n": 100,
+      "errors": 0,
+      "p50": 27,
+      "p95": 34.8,
+      "p99": 39,
+      "max": 39
+    },
+    "POST /orders": {
+      "n": 100,
+      "errors": 0,
+      "p50": 41.1,
+      "p95": 60.9,
+      "p99": 67.8,
+      "max": 67.8
+    },
+    "GET /health": {
+      "n": 500,
+      "errors": 0,
+      "p50": 2.4,
+      "p95": 5.1,
+      "p99": 5.5,
+      "max": 5.6
+    }
+  }
+}

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Fase 10] — 2026-11-18
+### Adicionado
+- Observabilidade: `/ready`, `/metrics` (Prometheus, token), log de acesso estruturado sem PII, cabeçalhos de segurança.
+- LGPD: exportação e anonimização de cliente (`lgpd:manage`), evidência append-only em `lgpd_requests` (migração 0012).
+- Testes: E2E da jornada completa, baseline de segurança, carga opt-in (`LOAD=1`).
+- Ops: `ops/restore-drill.sh`, `ops/alerts.yml` (não ativo), `ops/a11y-check.js`.
+- Docs: DEPLOY_CHECKLIST, ROLLBACK, RPO_RTO, PERFORMANCE, SECURITY_REVIEW_FASE10, USER_GUIDE, rascunhos legais (revisão jurídica pendente), runbook em OPERATIONS.
+### Corrigido
+- Portal do cliente bloqueava oficinas em `trial` (descoberto pelo E2E).
+### Não feito (ver FASE-10-relatorio)
+- Staging/produção, pentest/ZAP, alertas ativos, PITR, revisão jurídica.
+
 ## [Fase 9] — 2026-11-18
 ### Adicionado
 - Migração 0011: seguradoras/sinistros/autorizações (histórico imutável), transferências de estoque entre unidades, regras/lançamentos/adiantamentos/pagamentos de comissão (append-only), lista de espera da agenda, automações (regras, execuções idempotentes, interruptor da oficina); permissões `insurers:*`, `reports:advanced`, `automation:manage`, `commissions:*`; limite `automation.monthly`.
