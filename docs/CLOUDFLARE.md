@@ -25,7 +25,7 @@ A Cloudflare não oferece Postgres nativo; o produto depende de Postgres 16 (RLS
 ## Passo a passo
 ```bash
 # 0) Login
-cd apps/api && npx wrangler login
+npx wrangler login   # na RAIZ do repositório (wrangler.jsonc fica na raiz)
 
 # 1) Hyperdrive apontando para a conexão do app_rw (pooler do provedor se houver)
 npx wrangler hyperdrive create autoflow-db --connection-string="postgres://app_rw:SENHA@HOST:5432/autoflow"
@@ -48,14 +48,16 @@ MIGRATION_DATABASE_URL="postgres://app_owner:SENHA@HOST:5432/autoflow" pnpm --fi
 #    (primeira vez: criar o banco/roles com o bootstrap equivalente do provedor)
 
 # 6) Build do front e deploy
-pnpm --filter @autoflow/web build
-cd apps/api && npx wrangler deploy
+pnpm cf:deploy        # = build do front + wrangler deploy
 
 # 7) Smoke
 curl -fsS https://SEU-DOMINIO/ready          # {"ok":true,"db":"up"}
 curl -fsS -H "Authorization: Bearer $METRICS_TOKEN" https://SEU-DOMINIO/metrics | head
 ```
 Ou use o workflow manual `.github/workflows/deploy-cloudflare.yml` (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `MIGRATION_DATABASE_URL`; variável `APP_HOST`).
+
+## Deploy automático pelo Git (Cloudflare Workers Builds)
+No painel (Workers → autoflow → Settings → Builds): **Root directory** vazio (raiz), **Build command** `pnpm cf:build`, **Deploy command** `npx wrangler deploy`. O build **falha** enquanto o `id` do Hyperdrive e o domínio estiverem como placeholder em `wrangler.jsonc` (passos 1–4). A migração do banco **não** roda no build: execute o passo 5 antes (ou pelo workflow manual). Erro já visto: "application detection logic has been run in the root of a workspace" = não havia `wrangler.jsonc` na raiz (corrigido).
 
 ## Cron e jobs
 Os Cron Triggers de `wrangler.jsonc` ↔ `CRON_JOBS` em `src/worker.ts` (mantenha as strings idênticas). Cada job usa advisory lock de sessão por conexão direta do Worker→Postgres via Hyperdrive; se o provedor/pooler operar em **modo transaction**, o lock de sessão **não funciona** — nesse caso a execução concorrente deve ser tolerada pela idempotência dos jobs (cobrança, outbox com `for update skip locked`) ou o Hyperdrive deve apontar para conexão direta (KI-095).

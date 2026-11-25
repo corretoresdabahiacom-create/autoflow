@@ -1,13 +1,13 @@
-// AUTOFLOW 2.0 — Cloudflare Workers (API + front estático no mesmo domínio). NÃO foi implantado: ver docs/CLOUDFLARE.md.
+// AUTOFLOW 2.0 — Cloudflare Workers (API + front estático no mesmo domínio). Config na RAIZ do monorepo (Workers Builds roda `npx wrangler deploy` aqui). Ver docs/CLOUDFLARE.md.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "autoflow",
-  "main": "src/worker.ts",
+  "main": "apps/api/src/worker.ts",
   "compatibility_date": "2025-09-01",
   "compatibility_flags": ["nodejs_compat"],
   // Front (apps/web/dist). API em /api/*; SSR público, arquivos assinados e webhooks atendidos pelo Worker na raiz.
   "assets": {
-    "directory": "../web/dist",
+    "directory": "apps/web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/o/*", "/c/*", "/m/*", "/files/*", "/webhooks/*", "/robots.txt", "/sitemap*", "/health", "/ready", "/metrics"]

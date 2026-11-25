@@ -24,7 +24,7 @@ jobs:
         run: pnpm --filter @autoflow/db cli migrate
         env: { MIGRATION_DATABASE_URL: "${{ secrets.MIGRATION_DATABASE_URL }}" }
       - name: Deploy do Worker
-        run: pnpm --filter @autoflow/api exec wrangler deploy
+        run: pnpm exec wrangler deploy
         env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}", CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" }
       - name: Smoke pós-deploy
         run: curl -fsS "https://${{ vars.APP_HOST }}/ready"

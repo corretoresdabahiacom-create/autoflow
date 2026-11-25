@@ -12,12 +12,17 @@
     "db:bootstrap": "pnpm --filter @autoflow/db cli bootstrap",
     "db:migrate": "pnpm --filter @autoflow/db cli migrate",
     "db:create-platform-user": "pnpm --filter @autoflow/api exec tsx scripts/create-platform-user.ts",
-    "bench:hash": "pnpm --filter @autoflow/api bench:hash"
+    "bench:hash": "pnpm --filter @autoflow/api bench:hash",
+    "cf:dev": "wrangler dev --local --test-scheduled --var NODE_ENV:development --var ALLOWED_ORIGINS:http://localhost:8787",
+    "cf:build": "pnpm --filter @autoflow/web build",
+    "cf:check": "pnpm cf:build && wrangler deploy --dry-run --outdir /tmp/wr-dry",
+    "cf:deploy": "pnpm cf:build && wrangler deploy"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "4.168.0"
   }
 }
