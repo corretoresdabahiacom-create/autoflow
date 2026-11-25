@@ -6,6 +6,7 @@ import { LocalDiskStorage, UnconfiguredStorage } from "./storage";
 import { MemoryEmailProvider, UnconfiguredEmailProvider } from "./email";
 import { CloudApiWhatsApp, MemoryPush, SandboxPayments, SandboxWhatsApp, UnconfiguredPayments, UnconfiguredPush } from "./providers";
 import { MemoryCaptcha, TurnstileCaptcha, UnconfiguredCaptcha } from "./captcha";
+import { startScheduler } from "./scheduler";
 import { MemoryOtpChannel, UnconfiguredOtpChannel } from "./otp";
 
 const config = loadConfig();
@@ -21,7 +22,10 @@ const prod = config.env === "production";
 const whatsapp = prod ? new CloudApiWhatsApp(config.metaGraphVersion) : new SandboxWhatsApp();
 const payments = prod ? new UnconfiguredPayments() : new SandboxPayments(config); // gateway real: ADR-0005 pendente de aprovação/credenciais
 const push = prod ? new UnconfiguredPush() : new MemoryPush();
-const { app } = createApp({ config, db, email, storage, otp, captcha, whatsapp, payments, push });
+const deps = { config, db, email, storage, otp, captcha, whatsapp, payments, push };
+const { app } = createApp(deps);
+// Agendador interno (KI-024/065/076): opt-in por SCHEDULER=on; seguro com várias instâncias (advisory lock por job).
+if (process.env.SCHEDULER === "on") startScheduler(deps);
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });
 if (config.logLevel !== "silent") console.log(JSON.stringify({ level: "info", msg: "api up", port }));

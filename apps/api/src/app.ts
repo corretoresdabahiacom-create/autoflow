@@ -23,6 +23,7 @@ import { registerBillingRoutes } from "./routes/billing";
 import { registerIntegrationRoutes } from "./routes/integrations";
 import { registerCrmRoutes } from "./routes/crm";
 import { registerStockRoutes } from "./routes/stock";
+import { jobGauges } from "./scheduler";
 import type { AppEnv, Deps } from "./types";
 
 export function createApp(deps: Deps) {
@@ -85,6 +86,7 @@ export function createApp(deps: Deps) {
       g.autoflow_webhook_dead = Number(o.hooks?.dead ?? 0); g.autoflow_webhook_failed = Number(o.hooks?.failed ?? 0);
       g.autoflow_subscriptions_past_due = Number(o.subs?.past_due ?? 0); g.autoflow_subscriptions_suspended = Number(o.subs?.suspended ?? 0); g.autoflow_db_up = 1;
     } catch { g.autoflow_db_up = 0; }
+    Object.assign(g, jobGauges());
     return new Response(metrics.render(g), { headers: { "Content-Type": "text/plain; version=0.0.4", "Cache-Control": "no-store" } });
   });
   registerAuthRoutes(router, deps);

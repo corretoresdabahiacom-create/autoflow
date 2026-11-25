@@ -1,5 +1,14 @@
 # Changelog
 
+## [Fase 11] — 2026-11-25
+### Adicionado
+- Agendador interno opt-in (`SCHEDULER=on`): outbox (30 s), retry de webhooks (1 min), automações (5 min), cobrança (1 h); lock por job entre instâncias; métricas `autoflow_job_*` e alerta `JobStale`.
+- Fila de pedidos de titulares LGPD (`lgpd_tickets`, migração 0013) com prazo de 15 dias, atraso sinalizado, encerramento auditado; tela "Privacidade".
+- `ops/a11y-check.cjs`: axe em login, home, Privacidade e Avançado (API simulada).
+- Testes: `phase11.test.ts` (5).
+### Inalterado / não feito
+- Nenhum item bloqueado externamente avançou (staging/produção, pentest, jurídico, Meta, gateway).
+
 ## [Fase 10] — 2026-11-18
 ### Adicionado
 - Observabilidade: `/ready`, `/metrics` (Prometheus, token), log de acesso estruturado sem PII, cabeçalhos de segurança.

@@ -43,3 +43,8 @@ groups:
         for: 5m
         labels: { severity: critical }
         annotations: { summary: "Sem backup válido há >25h (RPO meta 24h). Métrica deve ser publicada pelo job de backup (não existe ainda)." }
+      - alert: JobStale
+        expr: time() - autoflow_job_outbox_last_success_timestamp_seconds > 300 or time() - autoflow_job_billing_last_success_timestamp_seconds > 10800 or increase(autoflow_job_outbox_failures_total[15m]) > 3
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Job agendado parado ou falhando (outbox/billing). Requer SCHEDULER=on em ao menos uma instância." }

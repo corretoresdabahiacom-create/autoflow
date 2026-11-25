@@ -13,6 +13,41 @@ const POL = { auth: "tenant", permission: "lgpd:manage" } as const;
 export function registerLgpdRoutes(r: Router, deps: Deps): void {
   const tx = <T>(p: Parameters<typeof tctx>[0], fn: (q: Q) => Promise<T>) => deps.db.tx(tctx(p), fn);
 
+  // Fila de requisições do titular. Prazo padrão: 15 dias (LGPD art. 19, II — declaração completa); confirmar com jurídico (KI-091).
+  const DAYS = 15;
+  r.post("/lgpd/tickets", POL, async (c) => {
+    const p = c.get("tenant");
+    const b = await parseJson(c, z.object({ kind: z.enum(["access", "correction", "anonymization", "portability", "sharing_info", "consent_revocation"]), channel: z.enum(["email", "phone", "in_person", "portal", "other"]).default("other"), customerId: uuid.optional(), receivedAt: z.string().datetime().optional() }));
+    const t = await tx(p, async (q) => {
+      if (b.customerId && !(await q.one("select 1 from customers where id = $1", [b.customerId]))) throw notFound("customer_not_found");
+      const row = await q.one<{ id: string; due_at: Date }>(
+        "insert into lgpd_tickets (tenant_id, customer_id, kind, channel, received_at, due_at, created_by) values ($1,$2,$3,$4, coalesce($5::timestamptz, now()), coalesce($5::timestamptz, now()) + make_interval(days => $6), $7) returning id, due_at",
+        [p.tenantId, b.customerId ?? null, b.kind, b.channel, b.receivedAt ?? null, DAYS, p.userId]);
+      await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "lgpd.ticket_open", entityType: "lgpd_ticket", entityId: row!.id, requestId: c.get("requestId") });
+      return row!;
+    });
+    return c.json({ id: t.id, dueAt: t.due_at }, 201);
+  });
+  r.get("/lgpd/tickets", POL, async (c) => {
+    const p = c.get("tenant"); const st = z.enum(["open", "done", "rejected"]).optional().parse(c.req.query("status"));
+    const rows = await tx(p, (q) => q.many<Record<string, unknown>>(
+      `select id, customer_id, kind, channel, received_at, due_at, status, closed_at, resolution, (status = 'open' and due_at < now()) as overdue,
+              case when status = 'open' then ceil(extract(epoch from (due_at - now())) / 86400)::int end as days_left
+         from lgpd_tickets where ($1::text is null or status = $1) order by (status = 'open') desc, due_at limit 200`, [st ?? null]));
+    return c.json({ tickets: rows, overdue: rows.filter((x) => x.overdue).length });
+  });
+  r.post("/lgpd/tickets/:id/close", POL, async (c) => {
+    const p = c.get("tenant"); const id = uuid.parse(c.req.param("id"));
+    const b = await parseJson(c, z.object({ outcome: z.enum(["done", "rejected"]), resolution: z.string().trim().min(3).max(300) }));
+    await tx(p, async (q) => {
+      const t = await q.one<{ status: string }>("select status from lgpd_tickets where id = $1 for update", [id]);
+      if (!t) throw notFound("ticket_not_found"); if (t.status !== "open") throw conflict("ticket_closed");
+      await q.query("update lgpd_tickets set status = $2, closed_at = now(), closed_by = $3, resolution = $4 where id = $1", [id, b.outcome, p.userId, b.resolution]);
+      await audit(q, { tenantId: p.tenantId, actorType: "user", actorId: p.userId, action: "lgpd.ticket_close", entityType: "lgpd_ticket", entityId: id, requestId: c.get("requestId"), metadata: { outcome: b.outcome } });
+    });
+    return c.json({ ok: true });
+  });
+
   r.get("/customers/:id/export", POL, async (c) => {
     const p = c.get("tenant"); const id = uuid.parse(c.req.param("id"));
     const out = await tx(p, async (q) => {
