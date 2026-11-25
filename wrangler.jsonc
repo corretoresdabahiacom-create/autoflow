@@ -22,9 +22,9 @@
   "vars": {
     "NODE_ENV": "production",
     "STORAGE_BACKEND": "postgres",
-    "ALLOWED_ORIGINS": "https://SEU-DOMINIO",
-    "PUBLIC_BASE_URL": "https://SEU-DOMINIO",
-    "PORTAL_BASE_URL": "https://SEU-DOMINIO",
+    "ALLOWED_ORIGINS": "https://autoflow.corretoresdabahia-com.workers.dev",
+    "PUBLIC_BASE_URL": "https://autoflow.corretoresdabahia-com.workers.dev",
+    "PORTAL_BASE_URL": "https://autoflow.corretoresdabahia-com.workers.dev",
     "PASSWORD_SCRYPT_LOG_N": "15"
   }
   // Segredos (wrangler secret put): APP_ENCRYPTION_KEY (32 bytes base64), IP_HASH_SALT, METRICS_TOKEN (>=24), TURNSTILE_SECRET, META_APP_SECRET, WA_VERIFY_TOKEN, SANDBOX_WEBHOOK_SECRET (se usar)
