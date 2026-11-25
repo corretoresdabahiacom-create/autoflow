@@ -37,8 +37,14 @@ export async function bootstrap(opts: BootstrapOptions): Promise<void> {
       ["app_rw", opts.rwPassword, "LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE"],
     ] as const) {
       const exists = await admin.query("select 1 from pg_roles where rolname = $1", [role]);
-      if (exists.rowCount) await admin.query(`alter role ${role} with ${attrs} password ${lit(pw)}`);
+      // Role existente: só troca a senha. Em Postgres gerenciado (ex.: Neon) o administrador não é superusuário real e
+      // `ALTER ROLE ... [NO]SUPERUSER/BYPASSRLS` falha mesmo sem mudar nada; os atributos são verificados abaixo.
+      if (exists.rowCount) await admin.query(`alter role ${role} with password ${lit(pw)}`);
       else await admin.query(`create role ${role} with ${attrs} password ${lit(pw)}`);
+      const a = (await admin.query("select rolsuper, rolbypassrls, rolcreaterole, rolcreatedb from pg_roles where rolname = $1", [role])).rows[0];
+      if (a.rolsuper || a.rolbypassrls || a.rolcreaterole || a.rolcreatedb) {
+        throw new Error(`Role ${role} com privilégios indevidos (super=${a.rolsuper}, bypassrls=${a.rolbypassrls}, createrole=${a.rolcreaterole}, createdb=${a.rolcreatedb}); corrija com ALTER ROLE ${role} NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB antes de continuar.`);
+      }
     }
 
     if (opts.reset) {
