@@ -6,6 +6,7 @@ import { UnconfiguredEmailProvider } from "./email";
 import { MemoryOtpChannel, UnconfiguredOtpChannel } from "./otp";
 import { CloudApiWhatsApp, MemoryPush, SandboxPayments, SandboxWhatsApp, UnconfiguredPayments, UnconfiguredPush } from "./providers";
 import { MemoryStorage, R2Storage, UnconfiguredStorage, type R2BucketLike } from "./storage";
+import { PgStorage } from "./storage-pg";
 import { MemoryEmailProvider } from "./email";
 import { runJob, type JobName } from "./scheduler";
 import type { Deps } from "./types";
@@ -39,7 +40,8 @@ function build(env: WorkerEnv) {
   const deps: Deps = {
     config, db,
     email: prod ? new UnconfiguredEmailProvider() : new MemoryEmailProvider(), // KI-010
-    storage: env.FILES ? new R2Storage(env.FILES) : prod ? new UnconfiguredStorage() : new MemoryStorage(),
+    // R2 se houver binding FILES; senão Postgres quando STORAGE_BACKEND=postgres (gratuito); senão falha fechada em produção.
+    storage: env.FILES ? new R2Storage(env.FILES) : strings.STORAGE_BACKEND === "postgres" ? new PgStorage(db) : prod ? new UnconfiguredStorage() : new MemoryStorage(),
     otp: prod ? new UnconfiguredOtpChannel() : new MemoryOtpChannel(), // KI-003
     captcha: !prod ? new MemoryCaptcha() : strings.TURNSTILE_SECRET ? new TurnstileCaptcha(strings.TURNSTILE_SECRET) : new UnconfiguredCaptcha(),
     whatsapp: prod ? new CloudApiWhatsApp(config.metaGraphVersion) : new SandboxWhatsApp(), // KI-061

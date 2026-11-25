@@ -31,8 +31,9 @@ npx wrangler login   # na RAIZ do repositório (wrangler.jsonc fica na raiz)
 npx wrangler hyperdrive create autoflow-db --connection-string="postgres://app_rw:SENHA@HOST:5432/autoflow"
 #    -> copie o id para wrangler.jsonc ("hyperdrive"[0].id)
 
-# 2) R2 privado (NÃO habilite domínio público/r2.dev)
-npx wrangler r2 bucket create autoflow-files
+# 2) Arquivos: por padrão ficam no Postgres (STORAGE_BACKEND=postgres, migração 0014) — sem R2, sem cartão.
+#    Para usar R2 depois (exige cartão): crie o bucket PRIVADO e descomente r2_buckets no wrangler.jsonc.
+#    npx wrangler r2 bucket create autoflow-files
 
 # 3) Segredos
 openssl rand -base64 32 | npx wrangler secret put APP_ENCRYPTION_KEY
