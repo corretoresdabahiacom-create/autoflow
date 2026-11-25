@@ -8,7 +8,9 @@ export function toB64Url(bytes: Uint8Array): string {
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-export function fromB64Url(s: string): Uint8Array {
+export function fromB64Url(input: string): Uint8Array {
+  // tolera espaços/quebra de linha (ex.: `valor | wrangler secret put` no PowerShell) e "=" já existente
+  const s = input.trim().replace(/=+$/, "");
   const b64 = s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (s.length % 4)) % 4);
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
