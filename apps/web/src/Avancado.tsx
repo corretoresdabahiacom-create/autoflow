@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, errText } from "./api";
+import { Gestao } from "./Gestao";
 
 const money = (c: number) => (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const monthRange = () => { const d = new Date(); const f = new Date(d.getFullYear(), d.getMonth(), 1); const l = new Date(d.getFullYear(), d.getMonth() + 1, 0); const x = (v: Date) => `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`; return `from=${x(f)}&to=${x(l)}`; };
@@ -25,6 +26,7 @@ export function Avancado({ onBack }: { onBack: () => void }) {
       {late && <section className="card"><h2>Sinistros com prazo de autorização vencido</h2>{late.length === 0 ? <p className="muted">Nenhum.</p> : <ul className="list">{late.map((k) => <li key={k.id}>{k.claimNo} · solicitado {money(k.requestedCents)} · prazo {new Date(k.authorizationDueAt).toLocaleString("pt-BR")}</li>)}</ul>}</section>}
       {auto && <section className="card"><h2>Automações</h2><p>Uso no mês: {auto.usedThisMonth} / {auto.monthlyLimit ?? "ilimitado"} · {auto.platformKillSwitch ? "PAUSADAS pela plataforma" : auto.enabled ? "ativas" : "desligadas por você"}</p>
         <button className="secondary" onClick={toggle}>{auto.enabled ? "Desligar automações (kill-switch da oficina)" : "Ligar automações"}</button></section>}
+      <Gestao />
     </main>
   );
 }

@@ -7,6 +7,12 @@
 - **Fila LGPD com prazo** (migração 0013, rotas `/lgpd/tickets`, tela Privacidade): prazo 15 dias, atrasados primeiro, encerramento único e auditado, RLS por tenant. Testes: prazo, atraso, duplo encerramento (409), isolamento, 401.
 - **Acessibilidade**: axe-core (WCAG 2.1 A/AA) com API simulada em 4 telas do SPA, 0 violações.
 
+## Cloudflare (adicionado a pedido)
+Código e configuração prontos; **nada implantado** (KI-098). Detalhes, passo a passo e tabela validado × não validado em `docs/CLOUDFLARE.md`. Pontos de atenção: Postgres externo obrigatório, plano Workers Paid (KI-097), locks de job em modo transaction (KI-095).
+
+## Telas de gestão (KI-085b)
+Sinistros, comissões (leitura), lista de espera e histórico de transferências no Avançado; axe sem violações (7 telas no total). Criação de regras/adiantamentos/pagamentos de comissão e de transferências segue só na API.
+
 ## Não feito / limites
 - Nada bloqueado externamente mudou: **NO-GO da Fase 10 permanece** (ver FASE-10-relatorio.md).
 - Agendador não validado em réplicas reais nem atrás de pgbouncer em modo transaction (KI-095).

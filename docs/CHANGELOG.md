@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Fase 11] — 2026-11-25
+### Cloudflare (preparação, nada implantado)
+- `src/worker.ts` + `wrangler.jsonc`: API em Workers (Hyperdrive, R2 privado, Cron Triggers, front como Static Assets); `Db` modo `perTx`; `R2Storage`; workflow manual de deploy; `docs/CLOUDFLARE.md`. Validado em workerd local (login, RLS, crons, upload→R2 simulado, PDF, QR).
+### Telas
+- "Gestão" no Avançado: sinistros, comissões (leitura), lista de espera, transferências (histórico).
 ### Adicionado
 - Agendador interno opt-in (`SCHEDULER=on`): outbox (30 s), retry de webhooks (1 min), automações (5 min), cobrança (1 h); lock por job entre instâncias; métricas `autoflow_job_*` e alerta `JobStale`.
 - Fila de pedidos de titulares LGPD (`lgpd_tickets`, migração 0013) com prazo de 15 dias, atraso sinalizado, encerramento auditado; tela "Privacidade".
