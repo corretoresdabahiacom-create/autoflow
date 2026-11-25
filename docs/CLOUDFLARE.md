@@ -74,4 +74,4 @@ Os Cron Triggers de `wrangler.jsonc` ↔ `CRON_JOBS` em `src/worker.ts` (mantenh
 | Hyperdrive real, R2 real, TLS, domínio, WAF, limites de CPU/memória reais, cold start | **Não validado** (sem conta) |
 | Turnstile, e-mail, OTP, WhatsApp e gateway reais | **Não validado / bloqueado** (decisões e credenciais) |
 | Tempo de CPU por requisição (login) sob o limite do plano | **Não medido** (wrangler local não aplica limite) |
-| Upload/PDF/QR code em workerd | **Não exercitado** (bundle compila; sem fluxo de teste ponta a ponta) |
+| Upload→R2, PDF (termo de entrada), QR code e download assinado em workerd | **Validado** (local; R2 simulado). Arquivos de 10 MB e R2 real: não |

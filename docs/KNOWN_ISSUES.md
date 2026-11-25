@@ -102,4 +102,4 @@
 | KI-097 | Cloudflare exige **Workers Paid** (limite de CPU): scrypt N=2^15 (~0,2–0,3 s de relógio em workerd local; CPU real não medida) estouraria o plano gratuito. Medir CPU em produção e, se necessário, ajustar o custo do hash (impacta segurança — decisão sua) | P1 | Aberto |
 | KI-098 | Deploy na Cloudflare **nunca executado**: sem conta, Hyperdrive, R2, Postgres gerenciado, domínio ou segredos; workflow `deploy-cloudflare.yml` não testado | P0 | Bloqueado (conta/infra) |
 | KI-099 | `/metrics` e as variáveis de job vivem em memória por isolate do Worker (vários isolates ⇒ valores parciais); para observabilidade real usar Workers Logs/Analytics Engine ou push para Prometheus | P2 | Planejado |
-| KI-100 | Upload de anexos, geração de PDF (pdf-lib) e QR code (qrcode) **não exercitados** em workerd; só compilam no bundle | P2 | Aberto |
+| KI-100 | Upload de anexos → R2, PDF do termo de entrada (pdf-lib), QR code (qrcode) e download por URL assinada **validados em workerd local** (R2 simulado pelo miniflare, 2026-11-25). **Não** validados contra R2 real, nem com arquivos grandes (10 MB) ou carga | P2 | Parcial |
