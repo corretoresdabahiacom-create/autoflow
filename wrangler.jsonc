@@ -13,7 +13,7 @@
     "run_worker_first": ["/api/*", "/o/*", "/c/*", "/m/*", "/files/*", "/webhooks/*", "/robots.txt", "/sitemap*", "/health", "/ready", "/metrics"]
   },
   // Postgres externo (Neon/Supabase/RDS…) via Hyperdrive. Crie com: wrangler hyperdrive create autoflow-db --connection-string=...
-  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "SUBSTITUA_PELO_ID_DO_HYPERDRIVE", "localConnectionString": "postgres://app_rw:app_rw_dev@127.0.0.1:5432/autoflow_dev" }],
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "4b3fe1c72c4f46d49598ce7e18ce96a3", "localConnectionString": "postgres://app_rw:app_rw_dev@127.0.0.1:5432/autoflow_dev" }],
   // Bucket PRIVADO (sem domínio público). Crie com: wrangler r2 bucket create autoflow-files
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "autoflow-files" }],
   "triggers": { "crons": ["* * * * *", "*/5 * * * *", "0 * * * *"] },
