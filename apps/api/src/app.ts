@@ -75,7 +75,7 @@ export function createApp(deps: Deps) {
     if (!tok) return c.json({ error: "not_found" }, 404);
     const a = new TextEncoder().encode(got.padEnd(tok.length)), b = new TextEncoder().encode(tok); let diff = got.length ^ tok.length; for (let i = 0; i < b.length; i++) diff |= (a[i] ?? 0) ^ b[i]!;
     if (diff !== 0) return c.json({ error: "unauthorized" }, 401);
-    const g: Record<string, number> = { autoflow_db_pool_total: deps.db.pool.totalCount, autoflow_db_pool_idle: deps.db.pool.idleCount, autoflow_db_pool_waiting: deps.db.pool.waitingCount };
+    const g: Record<string, number> = { autoflow_db_pool_total: deps.db.pool.totalCount, autoflow_db_pool_idle: deps.db.pool.idleCount, autoflow_db_pool_waiting: deps.db.pool.waitingCount /* 0 em modo perTx */ };
     try {
       const o = await deps.db.tx({ actor: "platform" }, async (q) => ({
         outbox: await q.one<{ pending: string; failed: string; oldest: string | null }>("select count(*) filter (where status = 'pending')::bigint pending, count(*) filter (where status = 'failed')::bigint failed, extract(epoch from now() - min(available_at) filter (where status = 'pending'))::bigint oldest from outbox"),

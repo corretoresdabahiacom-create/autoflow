@@ -28,7 +28,7 @@ const lockKey = (job: JobName) => `autoflow:job:${job}`;
  * Falhas são contadas e registradas (sem PII); nunca propagam, para não derrubar o laço.
  */
 export async function runJob(deps: Deps, job: JobName): Promise<{ status: "ok" | "skipped" | "failed"; result?: unknown }> {
-  const client = await deps.db.pool.connect();
+  const client = await deps.db.acquire();
   const st = jobStats[job];
   try {
     const got = (await client.query("select pg_try_advisory_lock(hashtextextended($1, 0)) as ok", [lockKey(job)])).rows[0]?.ok === true;
@@ -45,7 +45,7 @@ export async function runJob(deps: Deps, job: JobName): Promise<{ status: "ok" |
     } finally {
       await client.query("select pg_advisory_unlock(hashtextextended($1, 0))", [lockKey(job)]);
     }
-  } finally { client.release(); }
+  } finally { await client.release(); }
 }
 
 /** Liga os temporizadores. Retorna função de parada. Habilitado por SCHEDULER=on (desligado por padrão: testes e dev). */

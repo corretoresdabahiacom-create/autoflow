@@ -1,0 +1,30 @@
+# Deploy MANUAL para Cloudflare (workflow_dispatch). NUNCA EXECUTADO — exige Hyperdrive/R2/segredos criados (docs/CLOUDFLARE.md).
+# Ordem: typecheck (testes = workflow CI) -> migrações (como app_owner, FORA do Worker) -> deploy do Worker. Rollback: `wrangler rollback` (ver docs/ROLLBACK.md).
+name: deploy-cloudflare
+on:
+  workflow_dispatch:
+    inputs:
+      environment: { description: "Ambiente (precisa existir em Settings > Environments)", required: true, default: staging, type: choice, options: [staging, production] }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+      # Testes completos rodam no workflow CI (com Postgres) — exigir CI verde no commit antes de disparar este deploy.
+      - name: Build do front
+        run: pnpm --filter @autoflow/web build
+      - name: Migrações (conexão DIRETA como app_owner; nunca pelo Hyperdrive)
+        run: pnpm --filter @autoflow/db cli migrate
+        env: { MIGRATION_DATABASE_URL: "${{ secrets.MIGRATION_DATABASE_URL }}" }
+      - name: Deploy do Worker
+        run: pnpm --filter @autoflow/api exec wrangler deploy
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}", CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" }
+      - name: Smoke pós-deploy
+        run: curl -fsS "https://${{ vars.APP_HOST }}/ready"

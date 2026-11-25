@@ -29,9 +29,23 @@ export function assertUuid(v: string, what = "id"): string {
 
 export class Db {
   readonly pool: pg.Pool;
+  private readonly perTx: boolean;
+  private readonly connectionString: string;
 
-  constructor(connectionString: string, max = 10) {
-    this.pool = new pg.Pool({ connectionString, max });
+  /**
+   * `perTx: true` (Cloudflare Workers): sem pool no isolate — conexões TCP não podem ser compartilhadas entre requisições.
+   * Cada transação abre/fecha um cliente; o pooling real é feito pelo Hyperdrive. Fora de Workers use o pool (padrão).
+   */
+  constructor(connectionString: string, max = 10, opts: { perTx?: boolean } = {}) {
+    this.connectionString = connectionString; this.perTx = opts.perTx ?? false;
+    this.pool = new pg.Pool({ connectionString, max: this.perTx ? 1 : max });
+  }
+
+  /** Obtém uma conexão dedicada (pool ou cliente avulso). Chamador deve chamar release(). */
+  async acquire(): Promise<{ query: pg.Client["query"]; release: () => Promise<void> | void }> {
+    if (!this.perTx) { const c = await this.pool.connect(); return { query: c.query.bind(c) as pg.Client["query"], release: () => c.release() }; }
+    const c = new pg.Client({ connectionString: this.connectionString }); await c.connect();
+    return { query: c.query.bind(c) as pg.Client["query"], release: () => c.end() };
   }
 
   /**
@@ -39,7 +53,7 @@ export class Db {
    * com SET LOCAL (escopo da transação) e executa `fn`. Qualquer erro faz rollback.
    */
   async tx<T>(ctx: DbContext, fn: (q: Q) => Promise<T>): Promise<T> {
-    const client = await this.pool.connect();
+    const client = await this.acquire();
     try {
       await client.query("begin");
       const unitIds = ctx.unitIds?.map((u) => assertUuid(u, "unitId")).join(",") ?? "";
@@ -70,7 +84,7 @@ export class Db {
       await client.query("rollback").catch(() => undefined);
       throw err;
     } finally {
-      client.release();
+      await client.release();
     }
   }
 

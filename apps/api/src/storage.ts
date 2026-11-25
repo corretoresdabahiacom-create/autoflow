@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { constantTimeEqual, sha256Hex } from "./crypto";
 import { HttpError } from "./http";
 
@@ -21,22 +19,17 @@ export class MemoryStorage implements StorageProvider {
   async get(key: string) { return this.files.get(key) ?? null; }
 }
 
-/** Dev local: disco fora do repositório. Produção usará R2 privado (KI-015: não implementado/validado). */
-export class LocalDiskStorage implements StorageProvider {
-  constructor(private readonly root: string) {}
-  private resolve(key: string): string {
-    const full = path.resolve(this.root, key);
-    if (!full.startsWith(path.resolve(this.root) + path.sep)) throw new Error("chave inválida");
-    return full;
-  }
-  async put(key: string, bytes: Uint8Array) {
-    const f = this.resolve(key);
-    await mkdir(path.dirname(f), { recursive: true });
-    await writeFile(f, bytes);
-  }
-  async get(key: string) {
-    try { return new Uint8Array(await readFile(this.resolve(key))); } catch { return null; }
-  }
+/** Subconjunto estrutural do R2Bucket (evita depender de @cloudflare/workers-types). Bucket PRIVADO: nunca expor publicamente. */
+export interface R2BucketLike {
+  put(key: string, value: Uint8Array): Promise<unknown>;
+  get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+}
+const R2_KEY = /^[A-Za-z0-9][A-Za-z0-9._\-\/]{0,300}$/;
+export class R2Storage implements StorageProvider {
+  constructor(private readonly bucket: R2BucketLike) {}
+  private check(key: string): string { if (!R2_KEY.test(key) || key.includes("..") || key.includes("//")) throw new Error("chave inválida"); return key; }
+  async put(key: string, bytes: Uint8Array) { await this.bucket.put(this.check(key), bytes); }
+  async get(key: string) { const o = await this.bucket.get(this.check(key)); return o ? new Uint8Array(await o.arrayBuffer()) : null; }
 }
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;

@@ -2,6 +2,8 @@
 
 > **Estado:** este checklist foi **ensaiado apenas localmente** (Postgres local, sem staging). Nenhum item de "staging" ou "produção" foi executado. Ver FASE-10-relatorio e KI-086.
 
+> **Alvo definido: Cloudflare Workers** — procedimento detalhado em `docs/CLOUDFLARE.md`.
+
 ## Pré-requisitos (dependem de você / infra)
 - [ ] Ambiente de staging e produção provisionados (KI-012: runtime Node vs Workers decidido) — **não existe hoje**
 - [ ] Segredos configurados no cofre do provedor: `DATABASE_URL`, `ENCRYPTION_KEY`, `METRICS_TOKEN` (≥24 chars), chaves de e-mail (KI-010), Turnstile (KI-042), WhatsApp (KI-061), gateway (KI-062)
